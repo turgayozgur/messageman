@@ -1,0 +1,14 @@
+mode: sidecar # sidecar, gateway
+metric: 
+  enabled: true
+  exporter: prometheus
+rabbitmq:
+  url: amqp://guest:guest@rabbitmq:5672/
+services:
+  - name: workerapi
+    url: http://workerapi:81
+    readiness:
+      path: /readiness
+    workers:
+      - path: /api/email/send
+        queue: email

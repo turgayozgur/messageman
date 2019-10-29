@@ -1,0 +1,11 @@
+mode: sidecar # sidecar, gateway
+metric: 
+  enabled: true
+  exporter: prometheus
+rabbitmq:
+  url: amqp://guest:guest@rabbitmq:5672/
+services:
+  - name: dispatcherapi
+    url: http://dispatcherapi:82
+    readiness:
+      path: /readiness

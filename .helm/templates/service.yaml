@@ -1,0 +1,14 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: {{ template "name" . }}
+  labels:
+    app: {{ template "name" . }}
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version }}
+spec:
+  selector:
+    app: {{ template "name" . }}
+  ports:
+    - name: http-{{ template "name" . }}
+      port: 80
+      targetPort: {{ .Values.port }}

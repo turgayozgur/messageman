@@ -1,0 +1,5 @@
+messageman
+!examples/job/monitoring/grafana/provisioning/dashboards/messageman
+.vscode
+backup
+vendor

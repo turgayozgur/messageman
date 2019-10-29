@@ -1,0 +1,66 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ template "name" . }}
+  labels:
+    app: {{ template "name" . }}
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version }}
+spec:
+  replicas: {{ .Values.replicas }}
+  revisionHistoryLimit: 3
+  progressDeadlineSeconds: 300
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app: {{ template "name" . }}
+      app.kubernetes.io/name: {{ template "name" . }}
+  template:
+    metadata:
+      labels:
+        app: {{ template "name" . }}
+        app.kubernetes.io/name: {{ template "name" . }}
+        log-group: {{ .Values.type }}
+        {{- if .Values.labels }}
+        {{ toYaml .Values.labels }}
+        {{- end }}
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+    spec:
+      containers:
+      - name: {{ template "name" . }}
+        image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+        ports:
+        - containerPort: {{ .Values.port }}
+        livenessProbe:
+          failureThreshold: 5
+          httpGet:
+            path: "/healthz"
+            port: {{ .Values.port }}
+            scheme: HTTP
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 10
+        resources:
+{{ toYaml .Values.resources | indent 10 }}
+        env:
+          - name: MESSAGEMAN_PORT
+            value: {{ .Values.port }}
+          - name: LOG_LEVEL
+            value: {{ .Values.logging.Level }}
+          - name: LOG_HUMANIZE
+            value: {{ .Values.logging.Humanize }}
+        volumeMounts:
+          - name: {{ template "name" . }}
+            mountPath: /app
+      volumes:
+        - name: {{ template "name" . }}
+          configMap:
+            name: {{ template "name" . }}
+            items:
+              - key: messageman.yml
+                path: messageman.yml

@@ -1,0 +1,48 @@
+nameOverride: ""
+
+replicas: 1
+
+# extra pod labels.
+labels: []
+
+image:
+  repository: turgayozgur/messageman
+  tag: latest
+
+# messageman port.
+port: 8015
+
+resources: {}
+  # limits:
+  #   cpu: 25m
+  #   memory: 25Mi
+  # requests:
+  #   cpu: 25m
+  #   memory: 25Mi
+
+logging:
+  level: info # debug, info, warn, error
+  humanize: false # if it is false, json log output will be active.
+
+metric: 
+  enabled: false
+  exporter: prometheus
+
+rabbitmq:
+  url: amqp://guest:guest@localhost:5672/
+
+# The services that connected to the messageman. 
+# For gateway mode, every request to messageman's queue endpoint is accepted. so you don't need to provide the service details,
+# but it is not recommended because this way, every queue request uses the same connection.
+#
+# The /readiness path of the service is required for only 'sidecar' mode.
+services: []
+  # - name: workerapi # required
+  #   url: http://workerapi:81 # required
+  #   readiness:
+  #     path: /readiness # required for sidecar mode.
+  #   workers:
+  #     - path: /api/email/send
+  #       queue: email
+  # - name: dispatcherapi
+  #   url: http://dispatcherapi:82

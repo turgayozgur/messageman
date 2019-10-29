@@ -1,0 +1,67 @@
+version: "3.7"
+services:
+
+  workerapi:
+    build: ./workerapi
+    ports:
+      - "81:81"
+    networks:
+      - worker
+ 
+  dispatcherapi:
+    build: ./dispatcherapi
+    ports:
+      - "82:82"
+    networks:
+      - dispatcher
+    environment:
+      - MESSAGEMAN_URL=http://messageman:8015
+
+  messageman:
+    image: messageman
+    ports:
+      - "8020:8015"
+    networks:
+      - worker
+      - dispatcher
+    volumes:
+      - ./messageman-gateway.yml:/app/messageman.yml
+    environment:
+      - LOG_LEVEL=info
+      - LOG_HUMANIZE=true
+      - MESSAGEMAN_PORT=8015
+
+  rabbitmq:
+    image: rabbitmq:3
+    ports:
+      - '5672:5672'
+    networks:
+      - worker
+      - dispatcher
+
+  prometheus:
+    image: prom/prometheus
+    ports:
+      - 9090:9090
+    networks:
+      - worker
+      - dispatcher
+      - monitoring
+    volumes:
+      - ./monitoring/prometheus/prometheus-for-gateway.yml:/etc/prometheus/prometheus.yml
+
+  grafana:
+    image: grafana/grafana
+    ports:
+      - 3000:3000
+    networks:
+      - monitoring
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=secret
+    volumes:
+      - ./monitoring/grafana/provisioning/:/etc/grafana/provisioning/
+
+networks:
+  worker:
+  dispatcher:
+  monitoring:

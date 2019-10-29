@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ template "name" . }}
+  labels:
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version }}
+data:
+  messageman.yml: |
+    mode: gateway
+    metric: 
+      enabled: {{ .Values.metric.enabled }}
+      exporter: {{ .Values.metric.exporter }}
+    rabbitmq:
+      url: {{ .Values.rabbitmq.url }}
+    services:
+{{ toYaml .Values.services | indent 6 }}
+      
