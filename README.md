@@ -67,7 +67,7 @@ If the message queued to the `greeting` queue, messagemen will post the body `{"
 ```yaml
 mode: gateway # sidecar, gateway
 metric: 
-  enabled: true
+  enabled: true # available at /metrics path.
   exporter: prometheus
 rabbitmq:
   url: amqp://guest:guest@localhost:5672/
@@ -89,7 +89,7 @@ services:
 
 ## Gateway mode on k8s
 
-Before applying the heml template, create your own `values.yaml` file from the default one. `./.helm/values.yaml`
+Before applying the helm template, create your own `values.yaml` file from the default one. `./.helm/values.yaml`
 
 ```bash
 helm upgrade --install messageman --values values.yaml ./.helm
