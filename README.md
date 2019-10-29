@@ -107,8 +107,6 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: messageman-yourservicename
-  labels:
-    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version }}
 data:
   messageman.yml: |
     mode: sidecar
