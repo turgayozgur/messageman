@@ -1,6 +1,6 @@
 # Messageman
 
-The ultimate, lightweight, distributed job/worker managing application. You can use it as a sidecar or a gateway. Distributed messages handled by built in RabbitMQ implementation.
+Lightweight, distributed job/worker managing application. Everything is a simple HTTP request. You can use it as a sidecar or a gateway. Distributed messages handled by built in RabbitMQ implementation.
 
 ## Highlights
 
