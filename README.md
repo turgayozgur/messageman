@@ -64,7 +64,7 @@ docker run --rm --name messageman -p 8015:8015 --volume=/path/to/messageman.yml:
 
 If the message queued to the `greeting` queue, messagemen will post the body `{"say":"hi!"}` to url `http://localhost:81/api/welcome`
 
-## Complate example of messageman.yml
+## Complete example of messageman.yml
 
 ```yaml
 mode: gateway # sidecar, gateway
