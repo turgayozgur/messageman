@@ -159,11 +159,11 @@ spec:
         timeoutSeconds: 10
       env:
         - name: MESSAGEMAN_PORT
-        value: 8015
+          value: 8015
         - name: LOG_LEVEL
-        value: info
+          value: info
         - name: LOG_HUMANIZE
-        value: true
+          value: true
       volumeMounts:
         - name: messageman
           mountPath: /app
