@@ -6,7 +6,7 @@ Lightweight, distributed job/worker managing application. Everything is a simple
 
 * Language agnostic way to implement distributed messaging. Best fit for microservices.
 * Everything is a simple HTTP request.
-* Lightweight. Written with golang. It does not make anything before/after proxying your message.
+* Lightweight. Written with golang. It doesn't serialize/deserialize the message when proxying. It only passes the body as a byte array by using fasthttp module.
 * `Sidecar` and `gateway` modes.
 * Super easy configuration.
 * Connection and channel management.
