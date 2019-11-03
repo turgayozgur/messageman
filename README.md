@@ -20,6 +20,7 @@ Lightweight, distributed job/worker managing application. Everything is a simple
 Check the docker-compose [examples](examples/README.md) to run the complete environment(2 api to send and receive messages, messageman, rabbitmq server, prometheus and grafana).
 
 ![examples](docs/img/messageman-gateway.svg)
+![examples](docs/img/messageman-sidecar.svg)
 
 ## Usage
 
