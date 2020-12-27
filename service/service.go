@@ -3,16 +3,19 @@ package service
 import (
 	"encoding/json"
 	"fmt"
-
+	"github.com/rs/zerolog/log"
 	"github.com/turgayozgur/messageman/config"
 	"github.com/turgayozgur/messageman/internal/messaging"
 	"github.com/turgayozgur/messageman/internal/metrics"
-	"github.com/rs/zerolog/log"
+	pb "github.com/turgayozgur/messageman/pb/v1/gen"
 	"github.com/valyala/fasthttp"
+	"google.golang.org/grpc"
+	"net"
 )
 
 // Server contains all that is needed to respond to incoming requests, like a database. Other services like a mail
 type Server struct {
+	pb.UnimplementedJobServiceServer
 	messager messaging.Messager
 	exporter metrics.Exporter
 	mainAPI  string
@@ -29,6 +32,21 @@ func NewServer(messager messaging.Messager, exporter metrics.Exporter, mainAPI s
 }
 
 func (s *Server) Listen() {
+	// listen gRPC
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%s", config.Cfg.GRPCPort))
+	if err != nil {
+		log.Fatal().Err(err)
+	}
+	gSrv := grpc.NewServer()
+	pb.RegisterJobServiceServer(gSrv, s)
+	go func() {
+		log.Info().Msgf("Now, gRPC listening on: http://localhost:%s", config.Cfg.GRPCPort)
+		if err := gSrv.Serve(lis); err != nil {
+			log.Fatal().Err(err)
+		}
+	}()
+
+	// listen REST
 	m := func(ctx *fasthttp.RequestCtx) {
 		defer func() {
 			if rc := recover(); rc != nil {
@@ -42,15 +60,18 @@ func (s *Server) Listen() {
 		case "/healthz":
 			s.healthz(ctx)
 		case "/queue":
-			s.Queue(ctx)
+			s.QueueREST(ctx)
 		case "/metrics":
 			s.exporter.Handle(ctx)
 		default:
 			s.notFound(ctx)
 		}
 	}
-	log.Info().Msgf("Now listening on: http://localhost:%s", config.Cfg.Port)
-	fasthttp.ListenAndServe(":"+config.Cfg.Port, m)
+
+	log.Info().Msgf("Now, listening on: http://localhost:%s", config.Cfg.Port)
+	if err := fasthttp.ListenAndServe(":"+config.Cfg.Port, m); err != nil {
+		log.Fatal().Err(err)
+	}
 }
 
 // healthz handles HTTP requests to know the messageman is healthy or not.

@@ -2,6 +2,8 @@
 
 Lightweight, distributed job/worker managing application. Everything is a simple HTTP request. You can use it as a sidecar or a gateway. Distributed messages handled by built in RabbitMQ implementation.
 
+**Important:** The software is not well tested yet. Consider making your own tests before using it in production.
+
 ## Highlights
 
 * Language agnostic way to implement distributed messaging. Best fit for microservices.
@@ -16,6 +18,7 @@ Lightweight, distributed job/worker managing application. Everything is a simple
 * Ready to use `helm` chart for gateway mode.
 * Simple example for sidecar mode on k8s.
 * Fully compatible with containerized environments such as Kubernetes.
+* Supports `gRPC` both one-way and two-way.
 
 Check the docker-compose [examples](examples/README.md) to run the complete environment(2 api to send and receive messages, messageman, rabbitmq server, prometheus and grafana).
 
@@ -76,11 +79,12 @@ rabbitmq:
   url: amqp://guest:guest@localhost:5672/
 services:
   - name: ReceiverApiName
-    url: http://localhost:81
+    url: http://localhost:81 # do not use http:// for gRPC
+    type: "REST" # gRPC, REST. default: REST
     readiness:
       path: /readiness
     workers:
-      - path: /api/email/send
+      - path: /api/email/send # not required for gRPC.
         queue: email
   - name: SenderApiName
     url: http://localhost:82

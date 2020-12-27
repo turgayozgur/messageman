@@ -7,8 +7,8 @@ import (
 	"github.com/turgayozgur/messageman/internal/messaging"
 	"github.com/turgayozgur/messageman/internal/waitfor"
 
-	"github.com/turgayozgur/messageman/internal/metrics"
 	"github.com/rs/zerolog/log"
+	"github.com/turgayozgur/messageman/internal/metrics"
 
 	"github.com/turgayozgur/messageman/config"
 	"github.com/turgayozgur/messageman/internal/messaging/rabbitmq"
@@ -20,7 +20,9 @@ func main() {
 	logging.InitZerolog(config.Cfg.Logging.Level, config.Cfg.Logging.Humanize)
 
 	// load configurations.
-	config.Load()
+	if err := config.Load(); err != nil {
+		log.Error().Msgf("Failed to load config. %v", err.Error())
+	}
 
 	// check have we any registered service
 	if config.Cfg.Services == nil || len(config.Cfg.Services) == 0 {
@@ -43,10 +45,10 @@ func main() {
 	}
 
 	// initialize services
-	for _, service := range config.Cfg.Services {
+	for _, s := range config.Cfg.Services {
 		// register workers if any.
 		wr := messaging.NewWorkerRegistrar(messager)
-		go wr.RegisterWorkers(service)
+		go wr.RegisterWorkers(s)
 	}
 
 	service.NewServer(messager, exporter, mainAPI).Listen()

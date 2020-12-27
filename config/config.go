@@ -12,10 +12,11 @@ import (
 
 // Config inits from configuration file
 type Config struct {
-	Mode    string
-	Port    string `yaml:"-"`
-	Metric  MetricConfig
-	Logging struct {
+	Mode     string
+	Port     string `yaml:"-"`
+	GRPCPort string `yaml:"-"`
+	Metric   MetricConfig
+	Logging  struct {
 		Level    string
 		Humanize bool
 	} `yaml:"-"`
@@ -38,6 +39,7 @@ type RabbitMQConfig struct {
 type ServiceConfig struct {
 	Name      string `yaml:"name"`
 	Url       string `yaml:"url"`
+	Type      string `yaml:"type"` // gRPC, REST. default: REST
 	Readiness struct {
 		Path string `yaml:"path"`
 	}
@@ -54,7 +56,9 @@ const (
 	DefaultConfigFile  = "messageman.yml"
 	UsageConfigFile    = "a messageman configuration yml path. The default path is the same location of messageman where you run."
 	DefaultMode        = "gateway"
+	DefaultServiceType = "REST"
 	DefaultPort        = "8015"
+	DefaultGRPCPort    = "8020"
 	DefaultRabbitMQUrl = "amqp://guest:guest@localhost:5672/"
 	DefaultLogLevel    = "info"
 )
@@ -71,9 +75,10 @@ func init() {
 		humanize = true
 	}
 	Cfg = &Config{
-		Mode:   DefaultMode,
-		Port:   getEnv("MESSAGEMAN_PORT", DefaultPort),
-		Metric: MetricConfig{},
+		Mode:     DefaultMode,
+		Port:     getEnv("MESSAGEMAN_PORT", DefaultPort),
+		GRPCPort: getEnv("MESSAGEMAN_GRPC_PORT", DefaultGRPCPort),
+		Metric:   MetricConfig{},
 		RabbitMQ: RabbitMQConfig{
 			Url: DefaultRabbitMQUrl,
 		},
@@ -107,6 +112,13 @@ func Load() error {
 	if err != nil {
 		log.Warn().Msgf("Can not parse the configuration file. %+v", err)
 		return err
+	}
+
+	// set default service type.
+	for _, v := range Cfg.Services {
+		if v.Type == "" {
+			v.Type = DefaultServiceType
+		}
 	}
 
 	return nil

@@ -5,10 +5,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/turgayozgur/messageman/config"
-	"github.com/turgayozgur/messageman/internal/metrics"
 	"github.com/rs/zerolog/log"
 	"github.com/streadway/amqp"
+	"github.com/turgayozgur/messageman/config"
+	"github.com/turgayozgur/messageman/internal/metrics"
 )
 
 var (
@@ -85,13 +85,15 @@ func (r *RabbitMQ) Send(mainAPI string, name string, message []byte) (err error)
 	if err != nil {
 		return err
 	}
-	defer channel.Close()
-	r.prepareChannel(channel, name)
-	if err != nil {
+	defer func() {
+		if err := channel.Close(); err != nil {
+			log.Error().Msgf("Failed to close the channel. %v", err)
+		}
+	}()
+	if err := r.prepareChannel(channel, name); err != nil {
 		return err
 	}
-	r.publish(channel, MainExchangeName, name, message)
-	if err != nil {
+	if err := r.publish(channel, MainExchangeName, name, message); err != nil {
 		return err
 	}
 	log.Debug().Str("queue", name).Msgf("Job sent")
@@ -113,12 +115,10 @@ func (r *RabbitMQ) Receive(mainAPI string, name string, fn func([]byte) bool) er
 }
 
 func (r *RabbitMQ) receive(channel *amqp.Channel, mainAPI string, name string, fn func([]byte) bool) error {
-	err := r.prepareChannel(channel, name)
-	if err != nil {
+	if err := r.prepareChannel(channel, name); err != nil {
 		return err
 	}
-	err = r.prepareChannelForRetry(channel, name, MainExchangeName)
-	if err != nil {
+	if err := r.prepareChannelForRetry(channel, name, MainExchangeName); err != nil {
 		return err
 	}
 
@@ -132,7 +132,7 @@ func (r *RabbitMQ) receive(channel *amqp.Channel, mainAPI string, name string, f
 		nil,   // args
 	)
 	if err != nil {
-		return fmt.Errorf("Failed to register a consumer. %v", err)
+		return err
 	}
 
 	go func() {
@@ -141,10 +141,14 @@ func (r *RabbitMQ) receive(channel *amqp.Channel, mainAPI string, name string, f
 			body := d.Body
 			success := r.invokeConsumerFunc(body, fn)
 			if !success {
-				r.publish(channel, MainRetryExchangeName, name, body)
+				if err := r.publish(channel, MainRetryExchangeName, name, body); err != nil {
+					log.Error().Msgf("Failed to publish to retry queue. %v", err)
+				}
 				r.exporter.IncReceiveError(mainAPI, name)
 			}
-			d.Ack(false)
+			if err := d.Ack(false); err != nil {
+				log.Error().Msgf("Failed to send ACK. %v", err)
+			}
 			r.exporter.ReceiveSeconds(time.Since(start), mainAPI, name)
 		}
 	}()
@@ -224,7 +228,10 @@ func (r *RabbitMQ) channel(mainAPI string, consumer *Consumer) (channel *amqp.Ch
 				ch, err := connection.Channel()
 				if err == nil {
 					channel = ch
-					r.receive(channel, mainAPI, consumer.name, consumer.fn)
+					if err := r.receive(channel, mainAPI, consumer.name, consumer.fn); err != nil {
+						log.Error().Msgf("Failed to recover consumer %s. %v", consumer.name, err)
+						continue
+					}
 					r.exporter.IncWorker(mainAPI, consumer.name)
 					log.Info().Msgf("Consumer %s successfully recovered.", consumer.name)
 					break

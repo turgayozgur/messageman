@@ -2,21 +2,26 @@ package messaging
 
 import (
 	"bytes"
+	"context"
 	"fmt"
+	pb "github.com/turgayozgur/messageman/pb/v1/gen"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/status"
 	"net/http"
 	"time"
 
+	"github.com/rs/zerolog/log"
 	"github.com/turgayozgur/messageman/config"
 	"github.com/turgayozgur/messageman/internal/waitfor"
-	"github.com/rs/zerolog/log"
 )
 
 const ContentType = "application/json"
 
 // WorkerRegistrar .
 type WorkerRegistrar struct {
-	messager   Messager
-	httpClient *http.Client
+	messager    Messager
+	httpClient  *http.Client
+	gRPCClients map[string]*grpc.ClientConn
 }
 
 func NewWorkerRegistrar(messager Messager) *WorkerRegistrar {
@@ -27,6 +32,7 @@ func NewWorkerRegistrar(messager Messager) *WorkerRegistrar {
 		httpClient: &http.Client{
 			Timeout: time.Second * 60,
 		},
+		gRPCClients: map[string]*grpc.ClientConn{},
 	}
 }
 
@@ -52,25 +58,80 @@ func (wr *WorkerRegistrar) registerWorker(service config.ServiceConfig, worker c
 	mainAPI := service.Name
 	url := fmt.Sprintf("%s%s", service.Url, path)
 
+	if service.Type == "gRPC" {
+		if err := wr.connGRPC(mainAPI, service.Url); err != nil {
+			log.Error().Msgf("Failed to connect to gRPC endpoint %s for the service %s", service.Url, mainAPI)
+			return
+		}
+	}
+
 	err := wr.messager.Receive(service.Name, queue, func(body []byte) bool {
 		log.Debug().Str("body", string(body)).Msg("Job received")
-		response, err := wr.httpClient.Post(url, ContentType, bytes.NewBuffer(body))
-		if err != nil {
-			log.Error().Err(err).Str("body", string(body)).Str("mainApi", mainAPI).Str("queue", queue).
-				Msgf("Job failed. An error occurred on http post. url:%s", url)
-			return false
+		var ok bool
+		if service.Type == "gRPC" {
+			ok = wr.receiveGRPC(mainAPI, queue, body)
+		} else {
+			ok = wr.receiveREST(mainAPI, url, queue, body)
 		}
-		if response.StatusCode >= 300 {
-			log.Error().Str("body", string(body)).Str("mainApi", mainAPI).Str("queue", queue).
-				Msgf("Job failed. Non success status code %d on http post to worker. url:%s", response.StatusCode, url)
-			return false
+		if !ok {
+			return ok
 		}
-		log.Debug().Str("body", string(body)).Msg("Job done")
+		log.Debug().Str("body", string(body)).Msg("Job succeeded")
 		return true
 	})
 	if err != nil {
 		log.Fatal().Err(err).Msg("")
 	} else {
-		log.Info().Str("queue", queue).Msgf("Worker '%s' registered", url)
+		log.Info().Str("queue", queue).Str("type", service.Type).Msgf("Worker '%s' registered", url)
 	}
+}
+
+func (wr *WorkerRegistrar) receiveREST(mainAPI string, url string, queue string, body []byte) bool {
+	response, err := wr.httpClient.Post(url, ContentType, bytes.NewBuffer(body))
+	if err != nil {
+		log.Error().Err(err).Str("body", string(body)).Str("mainApi", mainAPI).Str("queue", queue).
+			Msgf("Job failed. An error occurred on http post. url:%s", url)
+		return false
+	}
+	if response.StatusCode >= 300 {
+		log.Error().Str("body", string(body)).Str("mainApi", mainAPI).Str("queue", queue).
+			Msgf("Job failed. Non success status code %d on http post to worker. url:%s", response.StatusCode, url)
+		return false
+	}
+	return true
+}
+
+func (wr *WorkerRegistrar) receiveGRPC(mainAPI string, queue string, body []byte) bool {
+	c := pb.NewWorkerServiceClient(wr.gRPCClients[mainAPI])
+	_, err := c.Receive(context.Background(), &pb.ReceiveRequest{
+		Name:    queue,
+		Message: body,
+	})
+	if err != nil {
+		l := log.Error().Str("body", string(body)).Str("mainApi", mainAPI).Str("queue", queue)
+		if s, ok := status.FromError(err); ok {
+			l.Msgf("Job failed. Non success gRPC status code %d on http post to worker. message:%s", s.Code(), s.Message())
+		}
+		l.Msgf("Job failed. Unknown error from gRPC endpoint. %v", err)
+		return false
+	}
+	return true
+}
+
+func (wr *WorkerRegistrar) connGRPC(name string, addr string) error {
+	ctx := context.Background()
+	var err error
+
+	opts := []grpc.DialOption{
+		grpc.WithInsecure(),
+	}
+
+	cnn, err := grpc.DialContext(ctx, addr, opts...)
+	if err != nil {
+		return err
+	}
+
+	wr.gRPCClients[name] = cnn
+
+	return nil
 }

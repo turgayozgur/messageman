@@ -35,7 +35,7 @@ rabbitmq:
 # For gateway mode, every request to messageman's queue endpoint is accepted. so you don't need to provide the service details,
 # but it is not recommended because this way, every queue request uses the same connection.
 #
-# The /readiness path of the service is required for only 'sidecar' mode.
+# The /readiness path for the service is required for only 'sidecar' mode.
 services: []
   # - name: workerapi # required
   #   url: http://workerapi:81 # required
