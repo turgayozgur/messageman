@@ -39,28 +39,36 @@ type RabbitMQConfig struct {
 type ServiceConfig struct {
 	Name      string `yaml:"name"`
 	Url       string `yaml:"url"`
-	Type      string `yaml:"type"` // gRPC, REST. default: REST
 	Readiness struct {
 		Path string `yaml:"path"`
 	}
-	Workers []WorkerConfig
+	Workers     []WorkerConfig
+	Subscribers []SubscriberConfig
 }
 
 // WorkerConfig inits from configuration file
 type WorkerConfig struct {
 	Path  string `yaml:"path"`
 	Queue string `yaml:"queue"`
+	Type  string `yaml:"type"` // gRPC, REST. default: REST
+}
+
+// SubscriberConfig inits from configuration file
+type SubscriberConfig struct {
+	Path  string `yaml:"path"`
+	Event string `yaml:"event"`
+	Type  string `yaml:"type"` // gRPC, REST. default: REST
 }
 
 const (
-	DefaultConfigFile  = "messageman.yml"
-	UsageConfigFile    = "a messageman configuration yml path. The default path is the same location of messageman where you run."
-	DefaultMode        = "gateway"
-	DefaultServiceType = "REST"
-	DefaultPort        = "8015"
-	DefaultGRPCPort    = "8020"
-	DefaultRabbitMQUrl = "amqp://guest:guest@localhost:5672/"
-	DefaultLogLevel    = "info"
+	DefaultConfigFile   = "messageman.yml"
+	UsageConfigFile     = "a messageman configuration yml path. The default path is the same location of messageman where you run."
+	DefaultMode         = "gateway"
+	DefaultConsumerType = "REST"
+	DefaultPort         = "8015"
+	DefaultGRPCPort     = "8020"
+	DefaultRabbitMQUrl  = "amqp://guest:guest@localhost:5672/"
+	DefaultLogLevel     = "info"
 )
 
 var (
@@ -114,10 +122,17 @@ func Load() error {
 		return err
 	}
 
-	// set default service type.
+	// set default consumer type.
 	for _, v := range Cfg.Services {
-		if v.Type == "" {
-			v.Type = DefaultServiceType
+		for _, i := range v.Workers {
+			if i.Type == "" {
+				i.Type = DefaultConsumerType
+			}
+		}
+		for _, i := range v.Subscribers {
+			if i.Type == "" {
+				i.Type = DefaultConsumerType
+			}
 		}
 	}
 

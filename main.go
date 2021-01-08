@@ -44,11 +44,14 @@ func main() {
 		log.Info().Msg("Mode: gateway")
 	}
 
-	// initialize services
+	// initialize workers and subscribers
 	for _, s := range config.Cfg.Services {
 		// register workers if any.
 		wr := messaging.NewWorkerRegistrar(messager)
 		go wr.RegisterWorkers(s)
+		// register subscribers if any.
+		sr := messaging.NewSubscriberRegistrar(messager)
+		sr.RegisterSubscribers(s)
 	}
 
 	service.NewServer(messager, exporter, mainAPI).Listen()

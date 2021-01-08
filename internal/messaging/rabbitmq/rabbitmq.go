@@ -18,8 +18,6 @@ var (
 const (
 	// MainExchangeName constant.
 	MainExchangeName = "messsager.exchange.main"
-	// MainRetryExchangeName constant.
-	MainRetryExchangeName = "messsager.exchange.main.retry"
 	// RetryQueueNameSuffix constant.
 	RetryQueueNameSuffix = "retry"
 	// RetryQueueTTLMs constant.
@@ -93,7 +91,7 @@ func (r *RabbitMQ) Send(mainAPI string, name string, message []byte) (err error)
 	if err := r.prepareChannel(channel, name); err != nil {
 		return err
 	}
-	if err := r.publish(channel, MainExchangeName, name, message); err != nil {
+	if err := r.send(channel, MainExchangeName, name, name, message); err != nil {
 		return err
 	}
 	log.Debug().Str("queue", name).Msgf("Job sent")
@@ -141,7 +139,7 @@ func (r *RabbitMQ) receive(channel *amqp.Channel, mainAPI string, name string, f
 			body := d.Body
 			success := r.invokeConsumerFunc(body, fn)
 			if !success {
-				if err := r.publish(channel, MainRetryExchangeName, name, body); err != nil {
+				if err := r.send(channel, r.getRetryExchangeName(MainExchangeName), name, name, body); err != nil {
 					log.Error().Msgf("Failed to publish to retry queue. %v", err)
 				}
 				r.exporter.IncReceiveError(mainAPI, name)
@@ -255,7 +253,7 @@ func (r *RabbitMQ) prepareChannel(channel *amqp.Channel, queueName string) error
 		nil,              // arguments
 	)
 	if err != nil {
-		return fmt.Errorf("Failed to declare a main exchange. %v", err)
+		return fmt.Errorf("failed to declare a main exchange. %v", err)
 	}
 
 	_, err = channel.QueueDeclare(
@@ -267,7 +265,7 @@ func (r *RabbitMQ) prepareChannel(channel *amqp.Channel, queueName string) error
 		nil,       // arguments
 	)
 	if err != nil {
-		return fmt.Errorf("Failed to declare a queue. %v", err)
+		return fmt.Errorf("failed to declare a queue. %v", err)
 	}
 
 	err = channel.QueueBind(
@@ -278,23 +276,24 @@ func (r *RabbitMQ) prepareChannel(channel *amqp.Channel, queueName string) error
 		nil,
 	)
 	if err != nil {
-		return fmt.Errorf("Failed to bind queue to exchange. %v", err)
+		return fmt.Errorf("failed to bind queue to exchange. %v", err)
 	}
 	return nil
 }
 
 func (r *RabbitMQ) prepareChannelForRetry(channel *amqp.Channel, queueName string, mainExchangeName string) error {
+	retryExchangeName := r.getRetryExchangeName(mainExchangeName)
 	err := channel.ExchangeDeclare(
-		MainRetryExchangeName, // name
-		"direct",              // type
-		true,                  // durable
-		false,                 // auto-deleted
-		false,                 // internal
-		false,                 // no-wait
-		nil,                   // arguments
+		retryExchangeName, // name
+		"direct",          // type
+		true,              // durable
+		false,             // auto-deleted
+		false,             // internal
+		false,             // no-wait
+		nil,               // arguments
 	)
 	if err != nil {
-		return fmt.Errorf("Failed to declare a retry exchange. %v", err)
+		return fmt.Errorf("failed to declare a retry exchange. %v", err)
 	}
 
 	name := fmt.Sprintf("%s.%s", queueName, RetryQueueNameSuffix)
@@ -311,13 +310,13 @@ func (r *RabbitMQ) prepareChannelForRetry(channel *amqp.Channel, queueName strin
 		}, // arguments
 	)
 	if err != nil {
-		return fmt.Errorf("Failed to declare a retry queue. %v", err)
+		return fmt.Errorf("failed to declare a retry queue. %v", err)
 	}
 
 	err = channel.QueueBind(
-		name,                  // queue name
-		queueName,             // routing key
-		MainRetryExchangeName, // exchange
+		name,              // queue name
+		queueName,         // routing key
+		retryExchangeName, // exchange
 		false,
 		nil,
 	)
@@ -327,19 +326,19 @@ func (r *RabbitMQ) prepareChannelForRetry(channel *amqp.Channel, queueName strin
 	return nil
 }
 
-func (r *RabbitMQ) publish(channel *amqp.Channel, exchangeName string, queueName string, message []byte) error {
+func (r *RabbitMQ) send(channel *amqp.Channel, exchangeName string, queueName string, routingKey string, message []byte) error {
 	err := channel.Publish(
 		exchangeName, // exchange
-		queueName,    // routing key
+		routingKey,   // routing key
 		false,        // mandatory
 		false,        // immediate
 		amqp.Publishing{
-			ContentType:  "application/json",
+			ContentType:  "text/plain",
 			Body:         message,
 			DeliveryMode: amqp.Persistent,
 		})
 	if err != nil {
-		return fmt.Errorf("Failed to publish a message. %v", err)
+		return fmt.Errorf("failed to publish a message. %v", err)
 	}
 	return nil
 }
@@ -352,4 +351,8 @@ func (r *RabbitMQ) invokeConsumerFunc(body []byte, fn func([]byte) bool) (result
 		}
 	}()
 	return fn(body)
+}
+
+func (r *RabbitMQ) getRetryExchangeName(exchangeName string) string {
+	return fmt.Sprintf("%s.retry", exchangeName)
 }

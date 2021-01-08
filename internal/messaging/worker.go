@@ -17,11 +17,12 @@ import (
 
 const ContentType = "application/json"
 
+var gRPCClients = map[string]*grpc.ClientConn{}
+
 // WorkerRegistrar .
 type WorkerRegistrar struct {
-	messager    Messager
-	httpClient  *http.Client
-	gRPCClients map[string]*grpc.ClientConn
+	messager   Messager
+	httpClient *http.Client
 }
 
 func NewWorkerRegistrar(messager Messager) *WorkerRegistrar {
@@ -32,7 +33,6 @@ func NewWorkerRegistrar(messager Messager) *WorkerRegistrar {
 		httpClient: &http.Client{
 			Timeout: time.Second * 60,
 		},
-		gRPCClients: map[string]*grpc.ClientConn{},
 	}
 }
 
@@ -52,14 +52,14 @@ func (wr *WorkerRegistrar) RegisterWorkers(service config.ServiceConfig) {
 	}
 }
 
-func (wr *WorkerRegistrar) registerWorker(service config.ServiceConfig, worker config.WorkerConfig) {
-	path := worker.Path
-	queue := worker.Queue
+func (wr *WorkerRegistrar) registerWorker(service config.ServiceConfig, c config.WorkerConfig) {
+	path := c.Path
+	queue := c.Queue
 	mainAPI := service.Name
 	url := fmt.Sprintf("%s%s", service.Url, path)
 
-	if service.Type == "gRPC" {
-		if err := wr.connGRPC(mainAPI, service.Url); err != nil {
+	if c.Type == "gRPC" {
+		if err := connGRPC(mainAPI, service.Url); err != nil {
 			log.Error().Msgf("Failed to connect to gRPC endpoint %s for the service %s", service.Url, mainAPI)
 			return
 		}
@@ -68,7 +68,7 @@ func (wr *WorkerRegistrar) registerWorker(service config.ServiceConfig, worker c
 	err := wr.messager.Receive(service.Name, queue, func(body []byte) bool {
 		log.Debug().Str("body", string(body)).Msg("Job received")
 		var ok bool
-		if service.Type == "gRPC" {
+		if c.Type == "gRPC" {
 			ok = wr.receiveGRPC(mainAPI, queue, body)
 		} else {
 			ok = wr.receiveREST(mainAPI, url, queue, body)
@@ -82,7 +82,7 @@ func (wr *WorkerRegistrar) registerWorker(service config.ServiceConfig, worker c
 	if err != nil {
 		log.Fatal().Err(err).Msg("")
 	} else {
-		log.Info().Str("queue", queue).Str("type", service.Type).Msgf("Worker '%s' registered", url)
+		log.Info().Str("queue", queue).Str("type", c.Type).Msgf("Worker '%s' registered", url)
 	}
 }
 
@@ -102,7 +102,7 @@ func (wr *WorkerRegistrar) receiveREST(mainAPI string, url string, queue string,
 }
 
 func (wr *WorkerRegistrar) receiveGRPC(mainAPI string, queue string, body []byte) bool {
-	c := pb.NewWorkerServiceClient(wr.gRPCClients[mainAPI])
+	c := pb.NewWorkerServiceClient(gRPCClients[mainAPI])
 	_, err := c.Receive(context.Background(), &pb.ReceiveRequest{
 		Name:    queue,
 		Message: body,
@@ -118,7 +118,7 @@ func (wr *WorkerRegistrar) receiveGRPC(mainAPI string, queue string, body []byte
 	return true
 }
 
-func (wr *WorkerRegistrar) connGRPC(name string, addr string) error {
+func connGRPC(name string, addr string) error {
 	ctx := context.Background()
 	var err error
 
@@ -131,7 +131,7 @@ func (wr *WorkerRegistrar) connGRPC(name string, addr string) error {
 		return err
 	}
 
-	wr.gRPCClients[name] = cnn
+	gRPCClients[name] = cnn
 
 	return nil
 }

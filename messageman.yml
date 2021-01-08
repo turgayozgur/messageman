@@ -13,16 +13,34 @@
 #       - path: /api/email/send
 #         queue: email
 
+# mode: gateway # sidecar, gateway
+# metric:
+#   enabled: true
+#   exporter: prometheus
+# rabbitmq:
+#   url: amqp://guest:guest@localhost:5672/
+# services:
+#   - name: workerapi
+#     url: http://workerapi:81 # do not use http:// for gRPC. Also, the example's grpc port is 83 and the REST one is 81
+#     workers:
+#       - queue: email
+#         path: /api/email/send # not required for gRPC services. Bind only one gRPC endpoint allowed. Split your logic by queue name.
+#         type: gRPC
+
 mode: gateway # sidecar, gateway
-metric: 
+metric:
   enabled: true
   exporter: prometheus
 rabbitmq:
   url: amqp://guest:guest@localhost:5672/
 services:
-  - name: workerapi
-    url: http://workerapi:81 # do not use http:// for gRPC. Also, the example's grpc port is 83 and the REST one is 81
-    #type: gRPC
-    workers:
-      - queue: email
-        path: /api/email/send # not required for gRPC services.
+  - name: subscriberapi
+    url: localhost:83
+    subscribers:
+      - event: order_created
+        type: gRPC
+  - name: subscriberapi2
+    url: localhost:83
+    subscribers:
+      - event: order_created
+        type: gRPC

@@ -16,6 +16,7 @@ import (
 // Server contains all that is needed to respond to incoming requests, like a database. Other services like a mail
 type Server struct {
 	pb.UnimplementedJobServiceServer
+	pb.UnimplementedPublishServiceServer
 	messager messaging.Messager
 	exporter metrics.Exporter
 	mainAPI  string
@@ -39,6 +40,7 @@ func (s *Server) Listen() {
 	}
 	gSrv := grpc.NewServer()
 	pb.RegisterJobServiceServer(gSrv, s)
+	pb.RegisterPublishServiceServer(gSrv, s)
 	go func() {
 		log.Info().Msgf("Now, gRPC listening on: http://localhost:%s", config.Cfg.GRPCPort)
 		if err := gSrv.Serve(lis); err != nil {
@@ -61,6 +63,8 @@ func (s *Server) Listen() {
 			s.healthz(ctx)
 		case "/queue":
 			s.QueueREST(ctx)
+		case "/publish":
+			s.PublishREST(ctx)
 		case "/metrics":
 			s.exporter.Handle(ctx)
 		default:
@@ -89,6 +93,10 @@ func (s *Server) healthz(ctx *fasthttp.RequestCtx) {
 func (s *Server) write(ctx *fasthttp.RequestCtx, statusCode int, response interface{}) {
 	ctx.Response.Header.SetContentType("application/json")
 	ctx.Response.SetStatusCode(statusCode)
+
+	if response == nil {
+		return
+	}
 
 	if err := json.NewEncoder(ctx).Encode(response); err != nil {
 		ctx.Error(err.Error(), fasthttp.StatusInternalServerError)

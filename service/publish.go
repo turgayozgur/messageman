@@ -10,11 +10,11 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// Queue push message to workers.
-func (s *Server) QueueREST(ctx *fasthttp.RequestCtx) {
-	queueName := string(ctx.QueryArgs().Peek("name"))
+// Publish push message to subscribers.
+func (s *Server) PublishREST(ctx *fasthttp.RequestCtx) {
+	eventName := string(ctx.QueryArgs().Peek("name"))
 
-	if queueName == "" {
+	if eventName == "" {
 		s.badRequest(ctx, "\"name\" parameter is required.")
 		return
 	}
@@ -25,15 +25,15 @@ func (s *Server) QueueREST(ctx *fasthttp.RequestCtx) {
 		return
 	}
 
-	var mainAPI string
+	var publisher string
 	if s.mainAPI != "" {
-		mainAPI = s.mainAPI
+		publisher = s.mainAPI
 	} else {
-		// We can get the main api name from header if the x-sender-name header provided.
-		mainAPI = string(ctx.Request.Header.Peek("x-sender-name"))
+		// We can get the publisher name from header if the x-publisher-name header provided.
+		publisher = string(ctx.Request.Header.Peek("x-publisher-name"))
 	}
 
-	err := s.messager.Send(mainAPI, queueName, body)
+	err := s.messager.Publish(publisher, eventName, body)
 	if err != nil {
 		s.error(ctx, fasthttp.StatusInternalServerError, err.Error())
 		return
@@ -42,9 +42,9 @@ func (s *Server) QueueREST(ctx *fasthttp.RequestCtx) {
 	s.write(ctx, fasthttp.StatusOK, nil)
 }
 
-// Queue push message to workers by using gRPC.
-func (s *Server) Queue(ctx context.Context, in *pb.QueueRequest) (*empty.Empty, error) {
-	queueName := in.Name
+// Publish push message to subscribers by using gRPC.
+func (s *Server) Publish(ctx context.Context, in *pb.PublishRequest) (*empty.Empty, error) {
+	eventName := in.Name
 
 	if in.Name == "" {
 		return nil, status.Error(codes.InvalidArgument, "The \"name\" field is required.")
@@ -55,18 +55,18 @@ func (s *Server) Queue(ctx context.Context, in *pb.QueueRequest) (*empty.Empty, 
 		return nil, status.Error(codes.InvalidArgument, "The \"message\" field is required.")
 	}
 
-	var mainAPI string
+	var publisher string
 	if s.mainAPI != "" {
-		mainAPI = s.mainAPI
+		publisher = s.mainAPI
 	} else if md, ok := metadata.FromIncomingContext(ctx); ok {
-		// We can get the main api name from header if the x-sender-name header provided.
-		h := md.Get("x-sender-name")
+		// We can get the publisher name from header if the x-publisher-name header provided.
+		h := md.Get("x-publisher-name")
 		if len(h) > 0 {
-			mainAPI = h[0]
+			publisher = h[0]
 		}
 	}
 
-	err := s.messager.Send(mainAPI, queueName, body)
+	err := s.messager.Publish(publisher, eventName, body)
 	if err != nil {
 		return nil, status.Error(codes.Unknown, err.Error())
 	}
