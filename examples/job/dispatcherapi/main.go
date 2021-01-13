@@ -16,7 +16,7 @@ import (
 )
 
 var httpClient *http.Client
-var emailQueueName = "email"
+var emailQueueName = "send_email"
 var gRPCCnn *grpc.ClientConn
 
 func main() {
@@ -56,7 +56,7 @@ func dispatchSendEmail() {
 		"email": "test@testmail.com"
 	}`)))
 	req.Header.Add("Content-Type", "application/json")
-	req.Header.Add("x-sender-name", "dispatcherapi") // good to know for gateway implementation of messageman.
+	req.Header.Add("x-service-name", "dispatcherapi") // good to know for gateway implementation of messageman.
 	response, err := httpClient.Do(req)
 	if err != nil {
 		log.Printf("%+v", err)
@@ -78,7 +78,7 @@ func gRPCDispatchSendEmail() {
 	}
 
 	c := pb.NewJobServiceClient(gRPCCnn)
-	ctx := metadata.NewOutgoingContext(context.Background(), metadata.New(map[string]string{"x-sender-name": "dispatcherapi"}))
+	ctx := metadata.NewOutgoingContext(context.Background(), metadata.New(map[string]string{"x-service-name": "dispatcherapi"}))
 	if _, err := c.Queue(ctx, &pb.QueueRequest{
 		Name: emailQueueName,
 		Message: []byte(`

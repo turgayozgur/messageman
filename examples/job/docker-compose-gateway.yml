@@ -32,9 +32,10 @@ services:
       - MESSAGEMAN_PORT=8015
 
   rabbitmq:
-    image: rabbitmq:3
+    image: rabbitmq:3-management
     ports:
       - '5672:5672'
+      - '8080:15672'
     networks:
       - worker
       - dispatcher

@@ -15,26 +15,37 @@
     "editable": true,
     "gnetId": null,
     "graphTooltip": 0,
-    "iteration": 1572202554146,
+    "iteration": 1610552598207,
     "links": [],
     "panels": [
         {
             "cacheTimeout": null,
-            "colorBackground": true,
-            "colorValue": false,
-            "colors": [
-                "#d44a3a",
-                "#299c46",
-                "#299c46"
-            ],
             "datasource": "Prometheus",
-            "format": "none",
-            "gauge": {
-                "maxValue": 100,
-                "minValue": 0,
-                "show": false,
-                "thresholdLabels": false,
-                "thresholdMarkers": true
+            "fieldConfig": {
+                "defaults": {
+                    "custom": {},
+                    "mappings": [],
+                    "nullValueMode": "connected",
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "#d44a3a",
+                                "value": null
+                            },
+                            {
+                                "color": "#299c46",
+                                "value": 1
+                            },
+                            {
+                                "color": "#299c46",
+                                "value": 1000
+                            }
+                        ]
+                    },
+                    "unit": "none"
+                },
+                "overrides": []
             },
             "gridPos": {
                 "h": 4,
@@ -45,36 +56,22 @@
             "id": 17,
             "interval": null,
             "links": [],
-            "mappingType": 2,
-            "mappingTypes": [
-                {
-                    "name": "value to text",
-                    "value": 1
-                },
-                {
-                    "name": "range to text",
-                    "value": 2
-                }
-            ],
             "maxDataPoints": 100,
-            "nullPointMode": "connected",
-            "nullText": null,
-            "options": {},
-            "pluginVersion": "6.3.5",
-            "postfix": "",
-            "postfixFontSize": "50%",
-            "prefix": "",
-            "prefixFontSize": "50%",
-            "rangeMaps": [],
-            "sparkline": {
-                "fillColor": "rgba(31, 118, 189, 0.18)",
-                "full": true,
-                "lineColor": "rgb(31, 120, 193)",
-                "show": true,
-                "ymax": null,
-                "ymin": null
+            "options": {
+                "colorMode": "background",
+                "graphMode": "area",
+                "justifyMode": "auto",
+                "orientation": "horizontal",
+                "reduceOptions": {
+                    "calcs": [
+                        "lastNotNull"
+                    ],
+                    "fields": "",
+                    "values": false
+                },
+                "textMode": "auto"
             },
-            "tableColumn": "",
+            "pluginVersion": "7.3.6",
             "targets": [
                 {
                     "expr": "sum(up{job=\"messageman\"}) OR vector(0)",
@@ -83,20 +80,10 @@
                     "refId": "A"
                 }
             ],
-            "thresholds": "1,1000",
             "timeFrom": null,
             "timeShift": null,
             "title": "Instances",
-            "type": "singlestat",
-            "valueFontSize": "80%",
-            "valueMaps": [
-                {
-                    "op": "=",
-                    "text": "0",
-                    "value": "null"
-                }
-            ],
-            "valueName": "current"
+            "type": "stat"
         },
         {
             "aliasColors": {},
@@ -105,6 +92,13 @@
             "dashLength": 10,
             "dashes": false,
             "datasource": "Prometheus",
+            "fieldConfig": {
+                "defaults": {
+                    "custom": {},
+                    "links": []
+                },
+                "overrides": []
+            },
             "fill": 1,
             "fillGradient": 0,
             "gridPos": {
@@ -113,6 +107,7 @@
                 "x": 3,
                 "y": 0
             },
+            "hiddenSeries": false,
             "id": 15,
             "legend": {
                 "avg": false,
@@ -128,10 +123,10 @@
             "links": [],
             "nullPointMode": "null",
             "options": {
-                "dataLinks": []
+                "alertThreshold": true
             },
             "percentage": false,
-            "pluginVersion": "6.3.5",
+            "pluginVersion": "7.3.6",
             "pointradius": 2,
             "points": false,
             "renderer": "flot",
@@ -141,9 +136,10 @@
             "steppedLine": false,
             "targets": [
                 {
-                    "expr": "sum without (instance) (increase(messageman_jobs_send_duration_seconds_count{main_api=~\"$main_api\", queue=~\"$queue\"}[1m]))",
+                    "expr": "sum without (instance) (increase(messageman_send_duration_seconds_count{name=~\"$name\"}[1m]))",
                     "instant": false,
-                    "legendFormat": "{{ queue }}",
+                    "interval": "",
+                    "legendFormat": "name: {{ name }} service: {{ service }}",
                     "refId": "A"
                 }
             ],
@@ -151,7 +147,7 @@
             "timeFrom": null,
             "timeRegions": [],
             "timeShift": null,
-            "title": "Jobs Sent",
+            "title": "Events/Jobs Sent",
             "tooltip": {
                 "shared": true,
                 "sort": 0,
@@ -167,6 +163,7 @@
             },
             "yaxes": [
                 {
+                    "$$hashKey": "object:320",
                     "format": "ops",
                     "label": null,
                     "logBase": 1,
@@ -175,6 +172,7 @@
                     "show": true
                 },
                 {
+                    "$$hashKey": "object:321",
                     "format": "short",
                     "label": null,
                     "logBase": 1,
@@ -195,6 +193,13 @@
             "dashLength": 10,
             "dashes": false,
             "datasource": "Prometheus",
+            "fieldConfig": {
+                "defaults": {
+                    "custom": {},
+                    "links": []
+                },
+                "overrides": []
+            },
             "fill": 1,
             "fillGradient": 0,
             "gridPos": {
@@ -203,6 +208,7 @@
                 "x": 14,
                 "y": 0
             },
+            "hiddenSeries": false,
             "id": 16,
             "legend": {
                 "avg": false,
@@ -218,10 +224,10 @@
             "links": [],
             "nullPointMode": "null",
             "options": {
-                "dataLinks": []
+                "alertThreshold": true
             },
             "percentage": false,
-            "pluginVersion": "6.3.5",
+            "pluginVersion": "7.3.6",
             "pointradius": 2,
             "points": false,
             "renderer": "flot",
@@ -231,8 +237,9 @@
             "steppedLine": false,
             "targets": [
                 {
-                    "expr": "sum without (instance) (increase(messageman_jobs_receive_duration_seconds_count{main_api=~\"$main_api\", queue=~\"$queue\"}[1m]))",
+                    "expr": "sum without (instance) (increase(messageman_consume_duration_seconds_count{service=~\"$service\", name=~\"$name\"}[1m]))",
                     "instant": false,
+                    "interval": "",
                     "legendFormat": "{{ queue }}",
                     "refId": "A"
                 }
@@ -241,7 +248,7 @@
             "timeFrom": null,
             "timeRegions": [],
             "timeShift": null,
-            "title": "Jobs Received",
+            "title": "Events/Jobs Consumed",
             "tooltip": {
                 "shared": true,
                 "sort": 0,
@@ -280,21 +287,26 @@
         },
         {
             "cacheTimeout": null,
-            "colorBackground": false,
-            "colorValue": false,
-            "colors": [
-                "#299c46",
-                "rgba(237, 129, 40, 0.89)",
-                "#d44a3a"
-            ],
             "datasource": "Prometheus",
-            "format": "none",
-            "gauge": {
-                "maxValue": 100,
-                "minValue": 0,
-                "show": false,
-                "thresholdLabels": false,
-                "thresholdMarkers": true
+            "fieldConfig": {
+                "defaults": {
+                    "custom": {},
+                    "mappings": [],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            },
+                            {
+                                "color": "red",
+                                "value": 80
+                            }
+                        ]
+                    }
+                },
+                "overrides": []
             },
             "gridPos": {
                 "h": 5,
@@ -305,57 +317,35 @@
             "id": 4,
             "interval": null,
             "links": [],
-            "mappingType": 1,
-            "mappingTypes": [
-                {
-                    "name": "value to text",
-                    "value": 1
-                },
-                {
-                    "name": "range to text",
-                    "value": 2
-                }
-            ],
             "maxDataPoints": 100,
-            "nullPointMode": "connected",
-            "nullText": null,
-            "options": {},
-            "pluginVersion": "6.3.5",
-            "postfix": "",
-            "postfixFontSize": "50%",
-            "prefix": "",
-            "prefixFontSize": "50%",
-            "rangeMaps": [
-                {
-                    "from": "null",
-                    "text": "N/A",
-                    "to": "null"
-                }
-            ],
-            "sparkline": {
-                "fillColor": "rgba(31, 118, 189, 0.18)",
-                "full": true,
-                "lineColor": "rgb(31, 120, 193)",
-                "show": true,
-                "ymax": null,
-                "ymin": null
+            "options": {
+                "colorMode": "value",
+                "graphMode": "area",
+                "justifyMode": "auto",
+                "orientation": "auto",
+                "reduceOptions": {
+                    "calcs": [
+                        "mean"
+                    ],
+                    "fields": "",
+                    "values": false
+                },
+                "textMode": "auto"
             },
-            "tableColumn": "",
+            "pluginVersion": "7.3.6",
             "targets": [
                 {
-                    "expr": "sum(sum(messageman_connection_active_total{main_api=~\"$main_api\"}) by (instance)) OR vector(0)",
+                    "expr": "sum(sum(messageman_connection_active_total{name=~\"$name\"}) by (instance)) OR vector(0)",
                     "instant": true,
+                    "interval": "",
+                    "legendFormat": "",
                     "refId": "A"
                 }
             ],
-            "thresholds": "",
             "timeFrom": null,
             "timeShift": null,
             "title": "Connections",
-            "type": "singlestat",
-            "valueFontSize": "80%",
-            "valueMaps": [],
-            "valueName": "current"
+            "type": "stat"
         },
         {
             "aliasColors": {},
@@ -364,6 +354,13 @@
             "dashLength": 10,
             "dashes": false,
             "datasource": "Prometheus",
+            "fieldConfig": {
+                "defaults": {
+                    "custom": {},
+                    "links": []
+                },
+                "overrides": []
+            },
             "fill": 1,
             "fillGradient": 0,
             "gridPos": {
@@ -372,6 +369,7 @@
                 "x": 3,
                 "y": 7
             },
+            "hiddenSeries": false,
             "id": 12,
             "legend": {
                 "avg": false,
@@ -387,10 +385,10 @@
             "links": [],
             "nullPointMode": "null",
             "options": {
-                "dataLinks": []
+                "alertThreshold": true
             },
             "percentage": false,
-            "pluginVersion": "6.3.5",
+            "pluginVersion": "7.3.6",
             "pointradius": 2,
             "points": false,
             "renderer": "flot",
@@ -400,9 +398,10 @@
             "steppedLine": false,
             "targets": [
                 {
-                    "expr": "sum without (instance) (rate(messageman_jobs_send_duration_seconds_sum{main_api=~\"$main_api\", queue=~\"$queue\"}[1m])) / sum without (instance)(rate(messageman_jobs_send_duration_seconds_count{main_api=~\"$main_api\", queue=~\"$queue\"}[1m]))",
+                    "expr": "sum without (instance) (rate(messageman_send_duration_seconds_sum{name=~\"$name\"}[1m])) / sum without (instance)(rate(messageman_send_duration_seconds_count{name=~\"$name\"}[1m]))",
                     "instant": false,
-                    "legendFormat": "{{ queue }}",
+                    "interval": "",
+                    "legendFormat": "name: {{ name }} service: {{ service }}",
                     "refId": "A"
                 }
             ],
@@ -410,7 +409,7 @@
             "timeFrom": null,
             "timeRegions": [],
             "timeShift": null,
-            "title": "Duration of Sending",
+            "title": "Send Duration",
             "tooltip": {
                 "shared": true,
                 "sort": 0,
@@ -426,6 +425,7 @@
             },
             "yaxes": [
                 {
+                    "$$hashKey": "object:240",
                     "format": "s",
                     "label": null,
                     "logBase": 1,
@@ -434,6 +434,7 @@
                     "show": true
                 },
                 {
+                    "$$hashKey": "object:241",
                     "format": "short",
                     "label": null,
                     "logBase": 1,
@@ -454,6 +455,13 @@
             "dashLength": 10,
             "dashes": false,
             "datasource": "Prometheus",
+            "fieldConfig": {
+                "defaults": {
+                    "custom": {},
+                    "links": []
+                },
+                "overrides": []
+            },
             "fill": 1,
             "fillGradient": 0,
             "gridPos": {
@@ -462,6 +470,7 @@
                 "x": 14,
                 "y": 7
             },
+            "hiddenSeries": false,
             "id": 11,
             "legend": {
                 "avg": false,
@@ -477,10 +486,10 @@
             "links": [],
             "nullPointMode": "null",
             "options": {
-                "dataLinks": []
+                "alertThreshold": true
             },
             "percentage": false,
-            "pluginVersion": "6.3.5",
+            "pluginVersion": "7.3.6",
             "pointradius": 2,
             "points": false,
             "renderer": "flot",
@@ -490,8 +499,9 @@
             "steppedLine": false,
             "targets": [
                 {
-                    "expr": "sum without (instance) (rate(messageman_jobs_receive_duration_seconds_sum{main_api=~\"$main_api\", queue=~\"$queue\"}[1m])) / sum without (instance) (rate(messageman_jobs_receive_duration_seconds_count{main_api=~\"$main_api\", queue=~\"$queue\"}[1m]))",
+                    "expr": "sum without (instance) (rate(messageman_consume_duration_seconds_sum{service=~\"$service\", name=~\"$name\"}[1m])) / sum without (instance) (rate(messageman_consume_duration_seconds_coun{service=~\"$service\", name=~\"$name\"}[1m]))",
                     "instant": false,
+                    "interval": "",
                     "legendFormat": "{{ queue }}",
                     "refId": "A"
                 }
@@ -500,7 +510,7 @@
             "timeFrom": null,
             "timeRegions": [],
             "timeShift": null,
-            "title": "Duration of Working",
+            "title": "Consume Duration",
             "tooltip": {
                 "shared": true,
                 "sort": 0,
@@ -516,6 +526,7 @@
             },
             "yaxes": [
                 {
+                    "$$hashKey": "object:211",
                     "format": "s",
                     "label": null,
                     "logBase": 1,
@@ -524,6 +535,7 @@
                     "show": true
                 },
                 {
+                    "$$hashKey": "object:212",
                     "format": "short",
                     "label": null,
                     "logBase": 1,
@@ -539,21 +551,28 @@
         },
         {
             "cacheTimeout": null,
-            "colorBackground": false,
-            "colorValue": false,
-            "colors": [
-                "#299c46",
-                "rgba(237, 129, 40, 0.89)",
-                "#d44a3a"
-            ],
             "datasource": "Prometheus",
-            "format": "none",
-            "gauge": {
-                "maxValue": 100,
-                "minValue": 0,
-                "show": false,
-                "thresholdLabels": false,
-                "thresholdMarkers": true
+            "fieldConfig": {
+                "defaults": {
+                    "custom": {},
+                    "mappings": [],
+                    "nullValueMode": "connected",
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            },
+                            {
+                                "color": "red",
+                                "value": 80
+                            }
+                        ]
+                    },
+                    "unit": "none"
+                },
+                "overrides": []
             },
             "gridPos": {
                 "h": 5,
@@ -564,58 +583,35 @@
             "id": 2,
             "interval": null,
             "links": [],
-            "mappingType": 1,
-            "mappingTypes": [
-                {
-                    "name": "value to text",
-                    "value": 1
-                },
-                {
-                    "name": "range to text",
-                    "value": 2
-                }
-            ],
             "maxDataPoints": 100,
-            "nullPointMode": "connected",
-            "nullText": null,
-            "options": {},
-            "pluginVersion": "6.3.5",
-            "postfix": "",
-            "postfixFontSize": "50%",
-            "prefix": "",
-            "prefixFontSize": "50%",
-            "rangeMaps": [
-                {
-                    "from": "null",
-                    "text": "N/A",
-                    "to": "null"
-                }
-            ],
-            "sparkline": {
-                "fillColor": "rgba(31, 118, 189, 0.18)",
-                "full": true,
-                "lineColor": "rgb(31, 120, 193)",
-                "show": true,
-                "ymax": null,
-                "ymin": null
+            "options": {
+                "colorMode": "value",
+                "graphMode": "area",
+                "justifyMode": "auto",
+                "orientation": "horizontal",
+                "reduceOptions": {
+                    "calcs": [
+                        "lastNotNull"
+                    ],
+                    "fields": "",
+                    "values": false
+                },
+                "textMode": "auto"
             },
-            "tableColumn": "",
+            "pluginVersion": "7.3.6",
             "targets": [
                 {
-                    "expr": "sum(messageman_worker_connected_total{main_api=~\"$main_api\", queue=~\"$queue\"}) OR vector(0)",
+                    "expr": "sum(messageman_consumer_connected_total{service=~\"$service\", name=~\"$name\"}) OR vector(0)",
                     "instant": true,
+                    "interval": "",
                     "legendFormat": "{{ queue }}",
                     "refId": "A"
                 }
             ],
-            "thresholds": "",
             "timeFrom": null,
             "timeShift": null,
-            "title": "Workers",
-            "type": "singlestat",
-            "valueFontSize": "80%",
-            "valueMaps": [],
-            "valueName": "current"
+            "title": "Consumers",
+            "type": "stat"
         },
         {
             "aliasColors": {},
@@ -624,6 +620,13 @@
             "dashLength": 10,
             "dashes": false,
             "datasource": "Prometheus",
+            "fieldConfig": {
+                "defaults": {
+                    "custom": {},
+                    "links": []
+                },
+                "overrides": []
+            },
             "fill": 1,
             "fillGradient": 0,
             "gridPos": {
@@ -632,6 +635,7 @@
                 "x": 0,
                 "y": 14
             },
+            "hiddenSeries": false,
             "id": 13,
             "legend": {
                 "avg": false,
@@ -647,10 +651,10 @@
             "links": [],
             "nullPointMode": "null",
             "options": {
-                "dataLinks": []
+                "alertThreshold": true
             },
             "percentage": false,
-            "pluginVersion": "6.3.5",
+            "pluginVersion": "7.3.6",
             "pointradius": 2,
             "points": false,
             "renderer": "flot",
@@ -660,8 +664,9 @@
             "steppedLine": false,
             "targets": [
                 {
-                    "expr": "sum without (instance) (increase(messageman_jobs_send_errors_total{main_api=~\"$main_api\", queue=~\"$queue\"}[1m]))",
+                    "expr": "sum without (instance) (increase(messageman_send_errors_total{service=~\"$service\", name=~\"$name\"}[1m]))",
                     "instant": false,
+                    "interval": "",
                     "legendFormat": "{{queue}}",
                     "refId": "A"
                 }
@@ -713,6 +718,13 @@
             "dashLength": 10,
             "dashes": false,
             "datasource": "Prometheus",
+            "fieldConfig": {
+                "defaults": {
+                    "custom": {},
+                    "links": []
+                },
+                "overrides": []
+            },
             "fill": 1,
             "fillGradient": 0,
             "gridPos": {
@@ -721,6 +733,7 @@
                 "x": 8,
                 "y": 14
             },
+            "hiddenSeries": false,
             "id": 6,
             "legend": {
                 "avg": false,
@@ -735,10 +748,10 @@
             "linewidth": 1,
             "nullPointMode": "null",
             "options": {
-                "dataLinks": []
+                "alertThreshold": true
             },
             "percentage": false,
-            "pluginVersion": "6.3.5",
+            "pluginVersion": "7.3.6",
             "pointradius": 2,
             "points": false,
             "renderer": "flot",
@@ -748,8 +761,9 @@
             "steppedLine": false,
             "targets": [
                 {
-                    "expr": "sum without (instance) (increase(messageman_jobs_receive_errors_total{main_api=~\"$main_api\", queue=~\"$queue\"}[1m]))",
+                    "expr": "sum without (instance) (increase(messageman_consume_errors_total{service=~\"$service\", name=~\"$name\"}[1m]))",
                     "instant": false,
+                    "interval": "",
                     "legendFormat": "{{queue}}",
                     "refId": "A"
                 }
@@ -758,7 +772,7 @@
             "timeFrom": null,
             "timeRegions": [],
             "timeShift": null,
-            "title": "Receive Errors",
+            "title": "Consume Errors",
             "tooltip": {
                 "shared": true,
                 "sort": 0,
@@ -801,6 +815,13 @@
             "dashLength": 10,
             "dashes": false,
             "datasource": "Prometheus",
+            "fieldConfig": {
+                "defaults": {
+                    "custom": {},
+                    "links": []
+                },
+                "overrides": []
+            },
             "fill": 1,
             "fillGradient": 0,
             "gridPos": {
@@ -809,6 +830,7 @@
                 "x": 16,
                 "y": 14
             },
+            "hiddenSeries": false,
             "id": 14,
             "legend": {
                 "avg": false,
@@ -823,10 +845,10 @@
             "linewidth": 1,
             "nullPointMode": "null",
             "options": {
-                "dataLinks": []
+                "alertThreshold": true
             },
             "percentage": false,
-            "pluginVersion": "6.3.5",
+            "pluginVersion": "7.3.6",
             "pointradius": 2,
             "points": false,
             "renderer": "flot",
@@ -836,8 +858,9 @@
             "steppedLine": false,
             "targets": [
                 {
-                    "expr": "sum without (instance) (increase(messageman_errors_total{main_api=~\"$main_api\", queue=~\"$queue\"}[1m]))",
+                    "expr": "sum without (instance) (increase(messageman_errors_total{service=~\"$service\", name=~\"$name\"}[1m]))",
                     "instant": false,
+                    "interval": "",
                     "legendFormat": "{{queue}}",
                     "refId": "A"
                 }
@@ -846,7 +869,7 @@
             "timeFrom": null,
             "timeRegions": [],
             "timeShift": null,
-            "title": "Other Errors",
+            "title": "Total Errors",
             "tooltip": {
                 "shared": true,
                 "sort": 0,
@@ -885,7 +908,7 @@
         }
     ],
     "refresh": "5s",
-    "schemaVersion": 20,
+    "schemaVersion": 26,
     "style": "dark",
     "tags": [],
     "templating": {
@@ -893,20 +916,22 @@
             {
                 "allValue": null,
                 "current": {
+                    "selected": true,
                     "text": "All",
                     "value": "$__all"
                 },
                 "datasource": "Prometheus",
-                "definition": "messageman_connection_active_total",
+                "definition": "messageman_consumer_connected_total{name=~\"$name\"}",
+                "error": null,
                 "hide": 0,
                 "includeAll": true,
-                "label": "Main Api",
+                "label": "Service",
                 "multi": false,
-                "name": "main_api",
+                "name": "service",
                 "options": [],
-                "query": "messageman_connection_active_total",
+                "query": "messageman_consumer_connected_total{name=~\"$name\"}",
                 "refresh": 1,
-                "regex": "/.*main_api=\"([^\"]*).*/",
+                "regex": "/.*service=\"([^\"]*).*/",
                 "skipUrlSync": false,
                 "sort": 0,
                 "tagValuesQuery": "",
@@ -918,20 +943,22 @@
             {
                 "allValue": "",
                 "current": {
+                    "selected": false,
                     "text": "All",
                     "value": "$__all"
                 },
                 "datasource": "Prometheus",
-                "definition": "messageman_worker_connected_total{main_api=~\"$main_api\"}",
+                "definition": "messageman_connection_active_total",
+                "error": null,
                 "hide": 0,
                 "includeAll": true,
-                "label": "Queue",
+                "label": "Name",
                 "multi": false,
-                "name": "queue",
+                "name": "name",
                 "options": [],
-                "query": "messageman_worker_connected_total{main_api=~\"$main_api\"}",
+                "query": "messageman_connection_active_total",
                 "refresh": 1,
-                "regex": "/.*queue=\"([^\"]*).*/",
+                "regex": "/.*name=\"([^\"]*).*/",
                 "skipUrlSync": false,
                 "sort": 0,
                 "tagValuesQuery": "",
@@ -963,5 +990,5 @@
     "timezone": "",
     "title": "Overview",
     "uid": "h3EqHJ5Wk",
-    "version": 2
+    "version": 3
 }
