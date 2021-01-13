@@ -1,13 +1,13 @@
 # Messageman
 
-Lightweight, distributed job/worker managing application. Everything is a simple HTTP request. You can use it as a sidecar or a gateway. Distributed messages handled by built in RabbitMQ implementation.
+The lightweight API that handle distributed job/worker & pub/sub logic. Everything is a simple HTTP/gRPC request. You can use it as a sidecar or a gateway. Distributed messages handled by built in RabbitMQ implementation.
 
 **Important:** The software is not well tested yet. Consider making your own tests before using it in production.
 
 ## Highlights
 
 * Language agnostic way to implement distributed messaging. Best fit for microservices.
-* Everything is a simple HTTP request.
+* Everything is a simple HTTP/gRPC request.
 * Lightweight. Written with golang. It doesn't serialize/deserialize the message when proxying. It only passes the body as a byte array by using fasthttp module.
 * `Sidecar` and `gateway` modes.
 * Super easy configuration.
@@ -36,7 +36,7 @@ Thats it! The messageman is up and ready to running with default configurations.
 ### Send messages
 
 ```bash
-curl "http://localhost:8015/queue?name=greeting" -d '{"say":"hi!"}'
+curl "http://localhost:8015/v1/queue?name=greeting" -d '{"say":"hi!"}'
 ```
 
 Make sure you have a rabbitmq server available at this url: `amqp://guest:guest@localhost:5672/`
@@ -52,12 +52,11 @@ Everyone can call the `queue` endpoint with a queue name. What if we need to rec
 
 messageman.yml
 ```yaml
-services:
-  - name: ReceiverApiName
-    url: http://localhost:81 # your receiver api endpoint.
-    workers:
-      - path: /api/welcome
-        queue: greeting
+queues:
+  - name: greeting
+    worker:
+      name: workerapi
+      url: http://localhost:81/api/email/send
 ```
 
 Run messageman with this config file. Also you can specify the config file location with using `-c` or `--config-file` arguments.
@@ -77,19 +76,20 @@ metric:
   exporter: prometheus
 rabbitmq:
   url: amqp://guest:guest@localhost:5672/
-services:
-  - name: ReceiverApiName
-    url: http://localhost:81 # do not use http:// for gRPC
-    type: "REST" # gRPC, REST. default: REST
-    readiness:
-      path: /readiness
-    workers:
-      - path: /api/email/send # not required for gRPC.
-        queue: email
-  - name: SenderApiName
-    url: http://localhost:82
-    readiness:
-      path: /readiness
+events:
+  - name: order_created
+    subscribers:
+      - name: subscriberapi
+        url: localhost:83
+        type: gRPC # gRPC, REST. default: REST
+queues:
+  - name: send_email
+    worker:
+      name: workerapi
+      url: http://workerapi:81/api/email/send
+      readiness:
+        path: /readiness
+      type: REST
 ```
 
 *Note:* Only one service allowed for `sidecar` mode. Workers are not required.
@@ -119,11 +119,6 @@ data:
     mode: sidecar
     rabbitmq:
       url: amqp://guest:guest@rabbitmqhostname:5672/
-    services:
-      - name: SenderApiName
-        url: http://localhost:82
-        readiness:
-          path: /readiness
 ```
 
 ```bash

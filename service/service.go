@@ -36,15 +36,15 @@ func (s *Server) Listen() {
 	// listen gRPC
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%s", config.Cfg.GRPCPort))
 	if err != nil {
-		log.Fatal().Err(err)
+		log.Error().Err(err)
 	}
 	gSrv := grpc.NewServer()
 	pb.RegisterJobServiceServer(gSrv, s)
 	pb.RegisterPublishServiceServer(gSrv, s)
 	go func() {
-		log.Info().Msgf("Now, gRPC listening on: http://localhost:%s", config.Cfg.GRPCPort)
+		log.Info().Msgf("now, gRPC listening on: http://localhost:%s", config.Cfg.GRPCPort)
 		if err := gSrv.Serve(lis); err != nil {
-			log.Fatal().Err(err)
+			log.Error().Err(err)
 		}
 	}()
 
@@ -52,7 +52,7 @@ func (s *Server) Listen() {
 	m := func(ctx *fasthttp.RequestCtx) {
 		defer func() {
 			if rc := recover(); rc != nil {
-				message := fmt.Sprintf("Panic during request. %+v", rc)
+				message := fmt.Sprintf("panic during request. %+v", rc)
 				s.error(ctx, fasthttp.StatusInternalServerError, message)
 				log.Error().Msg(message)
 			}
@@ -61,9 +61,9 @@ func (s *Server) Listen() {
 		case "/":
 		case "/healthz":
 			s.healthz(ctx)
-		case "/queue":
+		case "/v1/queue":
 			s.QueueREST(ctx)
-		case "/publish":
+		case "/v1/publish":
 			s.PublishREST(ctx)
 		case "/metrics":
 			s.exporter.Handle(ctx)
@@ -72,9 +72,9 @@ func (s *Server) Listen() {
 		}
 	}
 
-	log.Info().Msgf("Now, listening on: http://localhost:%s", config.Cfg.Port)
+	log.Info().Msgf("now, listening on: http://localhost:%s", config.Cfg.Port)
 	if err := fasthttp.ListenAndServe(":"+config.Cfg.Port, m); err != nil {
-		log.Fatal().Err(err)
+		log.Error().Err(err)
 	}
 }
 
@@ -84,7 +84,7 @@ func (s *Server) healthz(ctx *fasthttp.RequestCtx) {
 		ctx,
 		fasthttp.StatusOK,
 		&ResponseModel{
-			Message: "Welcome to messageman! The ultimate message manager proxy.",
+			Message: "welcome to messageman! The ultimate message manager proxy.",
 		},
 	)
 }

@@ -3,7 +3,6 @@ package messaging
 import (
 	"bytes"
 	"context"
-	"fmt"
 	pb "github.com/turgayozgur/messageman/pb/v1/gen"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/status"
@@ -12,7 +11,6 @@ import (
 
 	"github.com/rs/zerolog/log"
 	"github.com/turgayozgur/messageman/config"
-	"github.com/turgayozgur/messageman/internal/waitfor"
 )
 
 const ContentType = "application/json"
@@ -22,12 +20,14 @@ var gRPCClients = map[string]*grpc.ClientConn{}
 // WorkerRegistrar .
 type WorkerRegistrar struct {
 	messager   Messager
+	cfg        config.QueueConfig
 	httpClient *http.Client
 }
 
-func NewWorkerRegistrar(messager Messager) *WorkerRegistrar {
+func NewWorkerRegistrar(m Messager, cfg config.QueueConfig) *WorkerRegistrar {
 	return &WorkerRegistrar{
-		messager: messager,
+		messager: m,
+		cfg:      cfg,
 		// Clients and Transports are safe for concurrent use by multiple goroutines
 		// and for efficiency should only be created once and re-used.
 		httpClient: &http.Client{
@@ -37,88 +37,81 @@ func NewWorkerRegistrar(messager Messager) *WorkerRegistrar {
 }
 
 // RegisterWorkers to register given endpoints to queues via environment variables.
-func (wr *WorkerRegistrar) RegisterWorkers(service config.ServiceConfig) {
-	if service.Workers == nil {
-		return
-	}
-
-	if !config.IsSidecar() { // already waited on main method for sidecar mode.
-		// wait for the connection to establish.
-		waitfor.True(wr.messager.EnsureCanConnect, service.Name)
-	}
-
-	for _, worker := range service.Workers {
-		wr.registerWorker(service, worker)
-	}
+func (wr *WorkerRegistrar) RegisterWorker() {
+	wr.registerWorker()
 }
 
-func (wr *WorkerRegistrar) registerWorker(service config.ServiceConfig, c config.WorkerConfig) {
-	path := c.Path
-	queue := c.Queue
-	mainAPI := service.Name
-	url := fmt.Sprintf("%s%s", service.Url, path)
+func (wr *WorkerRegistrar) registerWorker() {
+	cfg := wr.cfg
+	url := cfg.Worker.Url
+	name := cfg.Name
+	service := cfg.Worker.Name
 
-	if c.Type == "gRPC" {
-		if err := connGRPC(mainAPI, service.Url); err != nil {
-			log.Error().Msgf("Failed to connect to gRPC endpoint %s for the service %s", service.Url, mainAPI)
+	if cfg.Worker.Type == "gRPC" {
+		if err := connGRPC(service, url); err != nil {
+			log.Error().Msgf("failed to connect to gRPC endpoint %s for the service %s", url, service)
 			return
 		}
 	}
 
-	err := wr.messager.Receive(service.Name, queue, func(body []byte) bool {
-		log.Debug().Str("body", string(body)).Msg("Job received")
+	err := wr.messager.Work(service, name, func(body []byte) bool {
+		log.Debug().Str("body", string(body)).Msg("job received")
 		var ok bool
-		if c.Type == "gRPC" {
-			ok = wr.receiveGRPC(mainAPI, queue, body)
+		if cfg.Worker.Type == "gRPC" {
+			ok = wr.receiveGRPC(service, name, body)
 		} else {
-			ok = wr.receiveREST(mainAPI, url, queue, body)
+			ok = wr.receiveREST(service, url, name, body)
 		}
 		if !ok {
 			return ok
 		}
-		log.Debug().Str("body", string(body)).Msg("Job succeeded")
+		log.Debug().Str("body", string(body)).Msg("job succeeded")
 		return true
 	})
 	if err != nil {
-		log.Fatal().Err(err).Msg("")
+		log.Error().Err(err).Msg("")
 	} else {
-		log.Info().Str("queue", queue).Str("type", c.Type).Msgf("Worker '%s' registered", url)
+		log.Info().Str("name", name).Str("service", service).Str("type", cfg.Worker.Type).Msg("worker registered")
 	}
 }
 
-func (wr *WorkerRegistrar) receiveREST(mainAPI string, url string, queue string, body []byte) bool {
+func (wr *WorkerRegistrar) receiveREST(service string, url string, name string, body []byte) bool {
 	response, err := wr.httpClient.Post(url, ContentType, bytes.NewBuffer(body))
 	if err != nil {
-		log.Error().Err(err).Str("body", string(body)).Str("mainApi", mainAPI).Str("queue", queue).
-			Msgf("Job failed. An error occurred on http post. url:%s", url)
+		log.Error().Err(err).Str("body", string(body)).Str("service", service).Str("name", name).
+			Msgf("job failed. An error occurred on http post. url:%s", url)
 		return false
 	}
 	if response.StatusCode >= 300 {
-		log.Error().Str("body", string(body)).Str("mainApi", mainAPI).Str("queue", queue).
-			Msgf("Job failed. Non success status code %d on http post to worker. url:%s", response.StatusCode, url)
+		log.Error().Str("body", string(body)).Str("service", service).Str("name", name).
+			Msgf("job failed. Non success status code %d on http post to worker. url:%s", response.StatusCode, url)
 		return false
 	}
 	return true
 }
 
-func (wr *WorkerRegistrar) receiveGRPC(mainAPI string, queue string, body []byte) bool {
-	c := pb.NewWorkerServiceClient(gRPCClients[mainAPI])
+func (wr *WorkerRegistrar) receiveGRPC(service string, name string, body []byte) bool {
+	c := pb.NewWorkerServiceClient(gRPCClients[service])
 	_, err := c.Receive(context.Background(), &pb.ReceiveRequest{
-		Name:    queue,
+		Name:    name,
 		Message: body,
 	})
 	if err != nil {
-		l := log.Error().Str("body", string(body)).Str("mainApi", mainAPI).Str("queue", queue)
+		l := log.Error().Str("body", string(body)).Str("service", service).Str("name", name)
 		if s, ok := status.FromError(err); ok {
-			l.Msgf("Job failed. Non success gRPC status code %d on http post to worker. message:%s", s.Code(), s.Message())
+			l.Msgf("job failed. Non success gRPC status code %d on http post to worker. message:%s", s.Code(), s.Message())
 		}
-		l.Msgf("Job failed. Unknown error from gRPC endpoint. %v", err)
+		l.Msgf("job failed. Unknown error from gRPC endpoint. %v", err)
 		return false
 	}
 	return true
 }
 
-func connGRPC(name string, addr string) error {
+func connGRPC(service string, addr string) error {
+	if _, ok := gRPCClients[service]; ok {
+		return nil
+	}
+
 	ctx := context.Background()
 	var err error
 
@@ -131,7 +124,7 @@ func connGRPC(name string, addr string) error {
 		return err
 	}
 
-	gRPCClients[name] = cnn
+	gRPCClients[service] = cnn
 
 	return nil
 }

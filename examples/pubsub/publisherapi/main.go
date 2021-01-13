@@ -51,7 +51,7 @@ func main() {
 
 func publishOrderCreated() {
 	url := getEnv("MESSAGEMAN_URL", "http://localhost:8015")
-	req, _ := http.NewRequest("POST", fmt.Sprintf("%s/publish?name=%s", url, orderCreatedEventName), bytes.NewBuffer([]byte(`
+	req, _ := http.NewRequest("POST", fmt.Sprintf("%s/v1/publish?name=%s", url, orderCreatedEventName), bytes.NewBuffer([]byte(`
 	{
 		"orderId": 1
 	}`)))

@@ -21,19 +21,19 @@ func (s *Server) QueueREST(ctx *fasthttp.RequestCtx) {
 
 	body := ctx.PostBody()
 	if body == nil || len(body) == 0 {
-		s.badRequest(ctx, "The request body is required.")
+		s.badRequest(ctx, "the request body is required.")
 		return
 	}
 
-	var mainAPI string
+	var service string
 	if s.mainAPI != "" {
-		mainAPI = s.mainAPI
+		service = s.mainAPI
 	} else {
-		// We can get the main api name from header if the x-sender-name header provided.
-		mainAPI = string(ctx.Request.Header.Peek("x-sender-name"))
+		// We can get the main api name from header if the x-service-name header provided.
+		service = string(ctx.Request.Header.Peek("x-service-name"))
 	}
 
-	err := s.messager.Send(mainAPI, queueName, body)
+	err := s.messager.Queue(service, queueName, body)
 	if err != nil {
 		s.error(ctx, fasthttp.StatusInternalServerError, err.Error())
 		return
@@ -47,26 +47,26 @@ func (s *Server) Queue(ctx context.Context, in *pb.QueueRequest) (*empty.Empty, 
 	queueName := in.Name
 
 	if in.Name == "" {
-		return nil, status.Error(codes.InvalidArgument, "The \"name\" field is required.")
+		return nil, status.Error(codes.InvalidArgument, "the \"name\" field is required.")
 	}
 
 	body := in.Message
 	if len(body) == 0 {
-		return nil, status.Error(codes.InvalidArgument, "The \"message\" field is required.")
+		return nil, status.Error(codes.InvalidArgument, "the \"message\" field is required.")
 	}
 
-	var mainAPI string
+	var service string
 	if s.mainAPI != "" {
-		mainAPI = s.mainAPI
+		service = s.mainAPI
 	} else if md, ok := metadata.FromIncomingContext(ctx); ok {
-		// We can get the main api name from header if the x-sender-name header provided.
-		h := md.Get("x-sender-name")
+		// We can get the service name from header if the x-service-name header provided.
+		h := md.Get("x-service-name")
 		if len(h) > 0 {
-			mainAPI = h[0]
+			service = h[0]
 		}
 	}
 
-	err := s.messager.Send(mainAPI, queueName, body)
+	err := s.messager.Queue(service, queueName, body)
 	if err != nil {
 		return nil, status.Error(codes.Unknown, err.Error())
 	}

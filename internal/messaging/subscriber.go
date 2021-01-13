@@ -3,10 +3,8 @@ package messaging
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"github.com/rs/zerolog/log"
 	"github.com/turgayozgur/messageman/config"
-	"github.com/turgayozgur/messageman/internal/waitfor"
 	pb "github.com/turgayozgur/messageman/pb/v1/gen"
 	"google.golang.org/grpc/status"
 	"net/http"
@@ -16,12 +14,14 @@ import (
 // SubscriberRegistrar .
 type SubscriberRegistrar struct {
 	messager   Messager
+	cfg        config.EventConfig
 	httpClient *http.Client
 }
 
-func NewSubscriberRegistrar(messager Messager) *SubscriberRegistrar {
+func NewSubscriberRegistrar(m Messager, cfg config.EventConfig) *SubscriberRegistrar {
 	return &SubscriberRegistrar{
-		messager: messager,
+		messager: m,
+		cfg:      cfg,
 		// Clients and Transports are safe for concurrent use by multiple goroutines
 		// and for efficiency should only be created once and re-used.
 		httpClient: &http.Client{
@@ -31,83 +31,77 @@ func NewSubscriberRegistrar(messager Messager) *SubscriberRegistrar {
 }
 
 // RegisterSubscribers to register given endpoints to queues via environment variables.
-func (s *SubscriberRegistrar) RegisterSubscribers(service config.ServiceConfig) {
-	if service.Subscribers == nil {
+func (s *SubscriberRegistrar) RegisterSubscribers() {
+	if s.cfg.Subscribers == nil {
 		return
 	}
 
-	if !config.IsSidecar() { // already waited on main method for sidecar mode.
-		// wait for the connection to establish.
-		waitfor.True(s.messager.EnsureCanConnect, service.Name)
-	}
-
-	for _, subscriber := range service.Subscribers {
-		s.registerSubscriber(service, subscriber)
+	for _, c := range s.cfg.Subscribers {
+		s.registerSubscriber(c)
 	}
 }
 
-func (s *SubscriberRegistrar) registerSubscriber(service config.ServiceConfig, c config.SubscriberConfig) {
-	path := c.Path
-	eventName := c.Event
-	subscriber := service.Name
-	url := fmt.Sprintf("%s%s", service.Url, path)
+func (s *SubscriberRegistrar) registerSubscriber(c config.ServiceConfig) {
+	name := s.cfg.Name
+	service := c.Name
+	url := c.Url
 
 	if c.Type == "gRPC" {
-		if err := connGRPC(subscriber, service.Url); err != nil {
-			log.Error().Msgf("Failed to connect to gRPC endpoint %s for the service %s", service.Url, subscriber)
+		if err := connGRPC(service, url); err != nil {
+			log.Error().Msgf("failed to connect to gRPC endpoint %s for the service %s", url, service)
 			return
 		}
 	}
 
-	err := s.messager.Subscribe(service.Name, eventName, func(body []byte) bool {
-		log.Debug().Str("body", string(body)).Msg("Message received")
+	err := s.messager.Subscribe(service, name, func(body []byte) bool {
+		log.Debug().Str("body", string(body)).Msg("message received")
 		var ok bool
 		if c.Type == "gRPC" {
-			ok = s.handleGRPC(subscriber, eventName, body)
+			ok = s.handleGRPC(service, name, body)
 		} else {
-			ok = s.handleREST(subscriber, url, eventName, body)
+			ok = s.handleREST(service, url, name, body)
 		}
 		if !ok {
 			return ok
 		}
-		log.Debug().Str("body", string(body)).Msg("Successfully handled")
+		log.Debug().Str("body", string(body)).Msg("successfully handled")
 		return true
 	})
 	if err != nil {
-		log.Fatal().Err(err).Msg("")
+		log.Error().Err(err).Msg("")
 	} else {
-		log.Info().Str("event", eventName).Str("type", c.Type).Msgf("Subscriber '%s' registered", url)
+		log.Info().Str("name", name).Str("service", service).Str("type", c.Type).Msg("subscriber registered")
 	}
 }
 
-func (s *SubscriberRegistrar) handleREST(subscriber string, url string, queue string, body []byte) bool {
+func (s *SubscriberRegistrar) handleREST(service string, url string, name string, body []byte) bool {
 	response, err := s.httpClient.Post(url, ContentType, bytes.NewBuffer(body))
 	if err != nil {
-		log.Error().Err(err).Str("body", string(body)).Str("subscriber", subscriber).Str("queue", queue).
-			Msgf("Handle failed. An error occurred on http post. url:%s", url)
+		log.Error().Err(err).Str("body", string(body)).Str("v", service).Str("name", name).
+			Msgf("handle failed. An error occurred on http post. url:%s", url)
 		return false
 	}
 	if response.StatusCode >= 300 {
-		log.Error().Str("body", string(body)).Str("subscriber", subscriber).Str("queue", queue).
-			Msgf("Handle failed. Non success status code %d on http post to subscriber. url:%s", response.StatusCode, url)
+		log.Error().Str("body", string(body)).Str("service", service).Str("name", name).
+			Msgf("handle failed. Non success status code %d on http post to subscriber. url:%s", response.StatusCode, url)
 		return false
 	}
 	return true
 }
 
-func (s *SubscriberRegistrar) handleGRPC(subscriber string, eventName string, body []byte) bool {
-	c := pb.NewHandlerServiceClient(gRPCClients[subscriber])
+func (s *SubscriberRegistrar) handleGRPC(service, name string, body []byte) bool {
+	c := pb.NewHandlerServiceClient(gRPCClients[service])
 	_, err := c.Handle(context.Background(), &pb.HandleRequest{
-		Name:    eventName,
+		Name:    name,
 		Message: body,
 	})
 	if err != nil {
-		l := log.Error().Str("body", string(body)).Str("subscriber", subscriber).Str("event", eventName)
+		l := log.Error().Str("body", string(body)).Str("service", service).Str("name", name)
 		if s, ok := status.FromError(err); ok {
-			l.Msgf("Handle failed. Non success gRPC status code %d on http post to subscriber. message:%s", s.Code(), s.Message())
+			l.Msgf("handle failed. Non success gRPC status code %d on http post to subscriber. message:%s", s.Code(), s.Message())
 			return false
 		}
-		l.Msgf("Handle failed. Unknown error from gRPC endpoint. %v", err)
+		l.Msgf("handle failed. Unknown error from gRPC endpoint. %v", err)
 		return false
 	}
 	return true

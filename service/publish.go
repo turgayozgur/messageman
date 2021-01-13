@@ -29,8 +29,8 @@ func (s *Server) PublishREST(ctx *fasthttp.RequestCtx) {
 	if s.mainAPI != "" {
 		publisher = s.mainAPI
 	} else {
-		// We can get the publisher name from header if the x-publisher-name header provided.
-		publisher = string(ctx.Request.Header.Peek("x-publisher-name"))
+		// We can get the publisher name from header if the x-service-name header provided.
+		publisher = string(ctx.Request.Header.Peek("x-service-name"))
 	}
 
 	err := s.messager.Publish(publisher, eventName, body)
@@ -59,8 +59,8 @@ func (s *Server) Publish(ctx context.Context, in *pb.PublishRequest) (*empty.Emp
 	if s.mainAPI != "" {
 		publisher = s.mainAPI
 	} else if md, ok := metadata.FromIncomingContext(ctx); ok {
-		// We can get the publisher name from header if the x-publisher-name header provided.
-		h := md.Get("x-publisher-name")
+		// We can get the service name from header if the x-service-name header provided.
+		h := md.Get("x-service-name")
 		if len(h) > 0 {
 			publisher = h[0]
 		}

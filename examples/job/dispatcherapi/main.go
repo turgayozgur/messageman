@@ -51,7 +51,7 @@ func main() {
 
 func dispatchSendEmail() {
 	url := getEnv("MESSAGEMAN_URL", "http://messageman:8015")
-	req, _ := http.NewRequest("POST", fmt.Sprintf("%s/queue?name=%s", url, emailQueueName), bytes.NewBuffer([]byte(`
+	req, _ := http.NewRequest("POST", fmt.Sprintf("%s/v1/queue?name=%s", url, emailQueueName), bytes.NewBuffer([]byte(`
 	{
 		"email": "test@testmail.com"
 	}`)))

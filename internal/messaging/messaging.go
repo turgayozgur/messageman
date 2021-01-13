@@ -2,9 +2,10 @@ package messaging
 
 // Messager interface
 type Messager interface {
-	EnsureCanConnect(params []interface{}) bool
-	Send(mainAPI string, name string, message []byte) error
-	Receive(mainAPI string, name string, fn func([]byte) bool) error
-	Publish(publisher string, eventName string, message []byte) error
-	Subscribe(subscriber string, eventName string, fn func([]byte) bool) error
+	EnsureCanConnect() bool
+	NotifyRecover(chan string) chan string
+	Queue(service string, name string, message []byte) error
+	Work(service string, name string, callback func([]byte) bool) error
+	Publish(service string, name string, message []byte) error
+	Subscribe(service string, name string, callback func([]byte) bool) error
 }

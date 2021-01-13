@@ -11,20 +11,14 @@ import (
 type Exporter interface {
 	Handle(ctx *fasthttp.RequestCtx)
 	IncSendError(string, string)
-	IncReceiveError(string, string)
-	IncPublishError(string, string)
-	IncHandleError(string, string)
+	IncConsumeError(string, string)
 	IncError(string)
-	IncWorker(string, string)
-	DecWorker(string, string)
-	IncSubscriber(string, string)
-	DecSubscriber(string, string)
+	IncConsumer(string, string)
+	DecConsumer(string, string)
 	IncConnection(string)
 	DecConnection(string)
 	SendSeconds(time.Duration, string, string)
-	ReceiveSeconds(time.Duration, string, string)
-	PublishSeconds(time.Duration, string, string)
-	HandleSeconds(time.Duration, string, string)
+	ConsumeSeconds(time.Duration, string, string)
 }
 
 // CreateExporter factory method
@@ -49,46 +43,28 @@ func (n *NilExporter) Handle(ctx *fasthttp.RequestCtx) {
 }
 
 // IncSendError .
-func (n *NilExporter) IncSendError(mainAPI string, queueName string) {}
+func (n *NilExporter) IncSendError(service string, name string) {}
 
-// IncReceiveError .
-func (n *NilExporter) IncReceiveError(mainAPI string, queueName string) {}
-
-// IncPublishError .
-func (n *NilExporter) IncPublishError(publisher string, eventName string) {}
-
-// IncHandleError .
-func (n *NilExporter) IncHandleError(subscriber string, eventName string) {}
+// IncConsumeError .
+func (n *NilExporter) IncConsumeError(service string, name string) {}
 
 // IncError .
-func (n *NilExporter) IncError(mainAPI string) {}
+func (n *NilExporter) IncError(service string) {}
 
-// IncWorker .
-func (n *NilExporter) IncWorker(mainAPI string, queueName string) {}
+// IncConsumer .
+func (n *NilExporter) IncConsumer(service string, name string) {}
 
-// DecWorker .
-func (n *NilExporter) DecWorker(mainAPI string, queueName string) {}
-
-// IncSubscriber .
-func (n *NilExporter) IncSubscriber(subscriber string, eventName string) {}
-
-// DecSubscriber .
-func (n *NilExporter) DecSubscriber(subscriber string, eventName string) {}
+// DecConsumer .
+func (n *NilExporter) DecConsumer(service string, name string) {}
 
 // IncConnection .
-func (n *NilExporter) IncConnection(mainAPI string) {}
+func (n *NilExporter) IncConnection(name string) {}
 
 // DecConnection .
-func (n *NilExporter) DecConnection(mainAPI string) {}
+func (n *NilExporter) DecConnection(name string) {}
 
 // SendSeconds .
-func (n *NilExporter) SendSeconds(d time.Duration, mainAPI string, queueName string) {}
+func (n *NilExporter) SendSeconds(d time.Duration, service string, name string) {}
 
-// ReceiveSeconds .
-func (n *NilExporter) ReceiveSeconds(d time.Duration, mainAPI string, queueName string) {}
-
-// PublishSeconds .
-func (n *NilExporter) PublishSeconds(d time.Duration, mainAPI string, queueName string) {}
-
-// HandleSeconds .
-func (n *NilExporter) HandleSeconds(d time.Duration, mainAPI string, queueName string) {}
+// ConsumeSeconds .
+func (n *NilExporter) ConsumeSeconds(d time.Duration, service string, name string) {}

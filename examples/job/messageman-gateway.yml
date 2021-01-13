@@ -4,16 +4,11 @@ metric:
   exporter: prometheus
 rabbitmq:
   url: amqp://guest:guest@rabbitmq:5672/
-services:
-  - name: workerapi
-    url: http://workerapi:81
-    readiness:
-      path: /readiness
-    workers:
-      - path: /api/email/send
-        queue: email
-  - name: dispatcherapi
-    url: http://dispatcherapi:82
-    readiness:
-      path: /readiness
-  
+queues:
+  - name: send_email
+    worker:
+      name: workerapi
+      url: http://workerapi:81/api/email/send
+      readiness:
+        path: /readiness
+      type: REST

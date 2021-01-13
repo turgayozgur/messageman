@@ -21,7 +21,8 @@ type Config struct {
 		Humanize bool
 	} `yaml:"-"`
 	RabbitMQ RabbitMQConfig
-	Services []ServiceConfig
+	Events   []EventConfig
+	Queues   []QueueConfig
 }
 
 // Config inits from configuration file
@@ -35,29 +36,26 @@ type RabbitMQConfig struct {
 	Url string `yaml:"url"`
 }
 
+// EventConfig .
+type EventConfig struct {
+	Name        string `yaml:"name"`
+	Subscribers []ServiceConfig
+}
+
+// QueueConfig .
+type QueueConfig struct {
+	Name   string `yaml:"name"`
+	Worker ServiceConfig
+}
+
 // ServiceConfig inits from configuration file
 type ServiceConfig struct {
 	Name      string `yaml:"name"`
 	Url       string `yaml:"url"`
+	Type      string `yaml:"type"` // gRPC, REST. default: REST
 	Readiness struct {
 		Path string `yaml:"path"`
 	}
-	Workers     []WorkerConfig
-	Subscribers []SubscriberConfig
-}
-
-// WorkerConfig inits from configuration file
-type WorkerConfig struct {
-	Path  string `yaml:"path"`
-	Queue string `yaml:"queue"`
-	Type  string `yaml:"type"` // gRPC, REST. default: REST
-}
-
-// SubscriberConfig inits from configuration file
-type SubscriberConfig struct {
-	Path  string `yaml:"path"`
-	Event string `yaml:"event"`
-	Type  string `yaml:"type"` // gRPC, REST. default: REST
 }
 
 const (
@@ -123,16 +121,16 @@ func Load() error {
 	}
 
 	// set default consumer type.
-	for _, v := range Cfg.Services {
-		for _, i := range v.Workers {
-			if i.Type == "" {
-				i.Type = DefaultConsumerType
-			}
-		}
+	for _, v := range Cfg.Events {
 		for _, i := range v.Subscribers {
 			if i.Type == "" {
 				i.Type = DefaultConsumerType
 			}
+		}
+	}
+	for _, v := range Cfg.Queues {
+		if v.Worker.Type == "" {
+			v.Worker.Type = DefaultConsumerType
 		}
 	}
 

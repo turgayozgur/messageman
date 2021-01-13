@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"net/url"
 
 	"github.com/turgayozgur/messageman/internal/logging"
 	"github.com/turgayozgur/messageman/internal/messaging"
@@ -15,64 +16,96 @@ import (
 	"github.com/turgayozgur/messageman/service"
 )
 
+var (
+	workerRegistrars     = map[string]*messaging.WorkerRegistrar{}
+	subscriberRegistrars = map[string]*messaging.SubscriberRegistrar{}
+)
+
 func main() {
 	// init logger.
 	logging.InitZerolog(config.Cfg.Logging.Level, config.Cfg.Logging.Humanize)
 
 	// load configurations.
 	if err := config.Load(); err != nil {
-		log.Error().Msgf("Failed to load config. %v", err.Error())
-	}
-
-	// check have we any registered service
-	if config.Cfg.Services == nil || len(config.Cfg.Services) == 0 {
-		log.Warn().Msg("No any registered service found. Please check your configuration file")
+		log.Error().Msgf("failed to load config. %v", err.Error())
 	}
 
 	// create metric exporter.
 	exporter := metrics.CreateExporter(config.Cfg.Metric.Enabled, config.Cfg.Metric.Exporter)
 
 	// initialize messager to queue messages sent.
-	messager := rabbitmq.New(exporter)
+	m := rabbitmq.New(exporter)
 
 	// check the sidecar mode and service count
-	mainAPI := ""
+	s := ""
 	if config.IsSidecar() {
-		log.Info().Msg("Mode: sidecar")
-		mainAPI = initSidecar(messager)
+		log.Info().Msg("mode: sidecar")
+		s = initSidecar(m)
 	} else {
-		log.Info().Msg("Mode: gateway")
+		log.Info().Msg("mode: gateway")
 	}
 
-	// initialize workers and subscribers
-	for _, s := range config.Cfg.Services {
-		// register workers if any.
-		wr := messaging.NewWorkerRegistrar(messager)
-		go wr.RegisterWorkers(s)
-		// register subscribers if any.
-		sr := messaging.NewSubscriberRegistrar(messager)
-		sr.RegisterSubscribers(s)
-	}
+	initConsumers(m)
 
-	service.NewServer(messager, exporter, mainAPI).Listen()
+	initRecover(m)
+
+	service.NewServer(m, exporter, s).Listen()
 }
 
-func initSidecar(messager messaging.Messager) (mainAPI string) {
+func initConsumers(m messaging.Messager) {
+	go func() {
+		if !config.IsSidecar() { // already waited on main method for sidecar mode.
+			// wait for the connection to establish.
+			waitfor.True(m.EnsureCanConnect)
+		}
+		for _, s := range config.Cfg.Events {
+			// register subscribers if any.
+			sr := messaging.NewSubscriberRegistrar(m, s)
+			sr.RegisterSubscribers()
+			subscriberRegistrars[s.Name] = sr
+		}
+		for _, s := range config.Cfg.Queues {
+			// register workers if any.
+			wr := messaging.NewWorkerRegistrar(m, s)
+			wr.RegisterWorker()
+			workerRegistrars[s.Name] = wr
+		}
+	}()
+}
+
+func initRecover(m messaging.Messager) {
+	go func() {
+		ch := make(chan string)
+		for {
+			name := <-m.NotifyRecover(ch)
+			if v, ok := subscriberRegistrars[name]; ok {
+				v.RegisterSubscribers()
+			}
+			if v, ok := workerRegistrars[name]; ok {
+				v.RegisterWorker()
+			}
+		}
+	}()
+}
+
+func initSidecar(m messaging.Messager) (service string) {
+	var s config.ServiceConfig
 	// Check the configured services.
-	if config.Cfg.Services == nil || len(config.Cfg.Services) > 1 {
-		log.Error().Msg("You need to register a service for the mode 'sidecar'. Only one service allowed for the mode 'sidecar'")
-		return
+	if len(config.Cfg.Queues) > 0 {
+		s = config.Cfg.Queues[0].Worker
+	} else if len(config.Cfg.Events) > 0 {
+		s = config.Cfg.Events[0].Subscribers[0]
 	}
 	// If are on the sidecar mode, wait the service to be ready is the best idea to continue.
-	readinessPath := config.Cfg.Services[0].Readiness.Path
+	readinessPath := s.Readiness.Path
 	if readinessPath == "" {
-		log.Error().Msg("Readiness path is required for sidecar mode.")
+		log.Error().Msg("readiness path is required for sidecar mode.")
 		return
 	}
 	// wait for the main API is up and running.
-	waitfor.API(fmt.Sprintf("%s%s", config.Cfg.Services[0].Url, readinessPath))
-	mainAPI = config.Cfg.Services[0].Name
+	u, _ := url.Parse(s.Url)
+	waitfor.API(fmt.Sprintf("%s%s:%s%s", u.Scheme, u.Host, u.Port(), readinessPath))
 	// wait for the connection to establish.
-	waitfor.True(messager.EnsureCanConnect, mainAPI)
-	return mainAPI
+	waitfor.True(m.EnsureCanConnect)
+	return service
 }
