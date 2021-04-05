@@ -76,9 +76,9 @@ var (
 )
 
 func init() {
-	humanize, err := strconv.ParseBool(getEnv("LOG_HUMANIZE", "true"))
+	humanize, err := strconv.ParseBool(getEnv("LOG_HUMANIZE", "false"))
 	if err != nil {
-		humanize = true
+		humanize = false
 	}
 	Cfg = &Config{
 		Mode:     DefaultMode,
