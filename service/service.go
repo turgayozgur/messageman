@@ -15,17 +15,19 @@ import (
 
 // Server contains all that is needed to respond to incoming requests, like a database. Other services like a mail
 type Server struct {
-	pb.UnimplementedJobServiceServer
-	pb.UnimplementedPublishServiceServer
+	pb.UnimplementedQueueServiceServer
+	pb.UnimplementedEventServiceServer
 	messager messaging.Messager
+	wrapper  messaging.Wrapper
 	exporter metrics.Exporter
 	mainAPI  string
 }
 
 // NewServer initializes the service with the given Database, and sets up appropriate routes.
-func NewServer(messager messaging.Messager, exporter metrics.Exporter, mainAPI string) *Server {
+func NewServer(messager messaging.Messager, wrapper messaging.Wrapper, exporter metrics.Exporter, mainAPI string) *Server {
 	server := &Server{
 		messager: messager,
+		wrapper:  wrapper,
 		exporter: exporter,
 		mainAPI:  mainAPI,
 	}
@@ -39,8 +41,8 @@ func (s *Server) Listen() {
 		log.Error().Err(err)
 	}
 	gSrv := grpc.NewServer()
-	pb.RegisterJobServiceServer(gSrv, s)
-	pb.RegisterPublishServiceServer(gSrv, s)
+	pb.RegisterQueueServiceServer(gSrv, s)
+	pb.RegisterEventServiceServer(gSrv, s)
 	go func() {
 		log.Info().Msgf("now, gRPC listening on: http://localhost:%s", config.Cfg.GRPCPort)
 		if err := gSrv.Serve(lis); err != nil {

@@ -33,7 +33,12 @@ func (s *Server) PublishREST(ctx *fasthttp.RequestCtx) {
 		publisher = string(ctx.Request.Header.Peek("x-service-name"))
 	}
 
-	err := s.messager.Publish(publisher, eventName, body)
+	var err error
+	if body, err = s.wrapBodyREST(ctx, body); err != nil {
+		s.error(ctx, fasthttp.StatusInternalServerError, "failed to wrap message.")
+	}
+
+	err = s.messager.Publish(publisher, eventName, body)
 	if err != nil {
 		s.error(ctx, fasthttp.StatusInternalServerError, err.Error())
 		return
@@ -55,10 +60,12 @@ func (s *Server) Publish(ctx context.Context, in *pb.PublishRequest) (*empty.Emp
 		return nil, status.Error(codes.InvalidArgument, "The \"message\" field is required.")
 	}
 
+	md, mdOk := metadata.FromIncomingContext(ctx)
+
 	var publisher string
 	if s.mainAPI != "" {
 		publisher = s.mainAPI
-	} else if md, ok := metadata.FromIncomingContext(ctx); ok {
+	} else if mdOk {
 		// We can get the service name from header if the x-service-name header provided.
 		h := md.Get("x-service-name")
 		if len(h) > 0 {
@@ -66,8 +73,14 @@ func (s *Server) Publish(ctx context.Context, in *pb.PublishRequest) (*empty.Emp
 		}
 	}
 
-	err := s.messager.Publish(publisher, eventName, body)
-	if err != nil {
+	var err error
+	if mdOk {
+		if body, err = s.wrapBodyGRPC(mdOk, md, body); err != nil {
+			return nil, status.Error(codes.Internal, "failed to wrap message.")
+		}
+	}
+
+	if err = s.messager.Publish(publisher, eventName, body); err != nil {
 		return nil, status.Error(codes.Unknown, err.Error())
 	}
 

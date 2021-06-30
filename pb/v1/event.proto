@@ -7,11 +7,17 @@ import "google/protobuf/empty.proto";
 option csharp_namespace = "Messageman.V1";
 option go_package = "github.com/turgayozgur/messageman/pb/v1;messageman";
 
-service JobService {
-  rpc Queue (QueueRequest) returns (google.protobuf.Empty);
+service EventService {
+  rpc Publish (PublishRequest) returns (google.protobuf.Empty);
+  rpc Handle (HandleRequest) returns (google.protobuf.Empty);
 }
 
-message QueueRequest {
+message PublishRequest {
+  string name = 1;
+  bytes message = 2;
+}
+
+message HandleRequest {
   string name = 1;
   bytes message = 2;
 }

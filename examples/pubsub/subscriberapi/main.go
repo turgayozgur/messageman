@@ -13,7 +13,7 @@ import (
 )
 
 type server struct {
-	pb.UnimplementedHandlerServiceServer
+	pb.UnimplementedEventServiceServer
 }
 
 func (server) Handle(ctx context.Context, in *pb.HandleRequest) (*empty.Empty, error) {
@@ -28,7 +28,7 @@ func main() {
 		panic(err)
 	}
 	gSrv := grpc.NewServer()
-	pb.RegisterHandlerServiceServer(gSrv, &server{})
+	pb.RegisterEventServiceServer(gSrv, &server{})
 	go func() {
 		log.Printf("Now, gRPC listening on: http://localhost:83")
 		if err := gSrv.Serve(lis); err != nil {

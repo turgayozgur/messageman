@@ -15,14 +15,15 @@ type Config struct {
 	Mode     string
 	Port     string `yaml:"-"`
 	GRPCPort string `yaml:"-"`
-	Metric   MetricConfig
+	Metric   *MetricConfig
 	Logging  struct {
 		Level    string
 		Humanize bool
 	} `yaml:"-"`
-	RabbitMQ RabbitMQConfig
-	Events   []EventConfig
-	Queues   []QueueConfig
+	RabbitMQ *RabbitMQConfig
+	Events   []*EventConfig
+	Queues   []*QueueConfig
+	Proxy    *ProxyConfig
 }
 
 // Config inits from configuration file
@@ -58,6 +59,12 @@ type ServiceConfig struct {
 	}
 }
 
+// ProxyConfig .
+type ProxyConfig struct {
+	Headers       []string
+	HeadersAsByte [][]byte
+}
+
 const (
 	DefaultConfigFile   = "messageman.yml"
 	UsageConfigFile     = "a messageman configuration yml path. The default path is the same location of messageman where you run."
@@ -84,8 +91,8 @@ func init() {
 		Mode:     DefaultMode,
 		Port:     getEnv("MESSAGEMAN_PORT", DefaultPort),
 		GRPCPort: getEnv("MESSAGEMAN_GRPC_PORT", DefaultGRPCPort),
-		Metric:   MetricConfig{},
-		RabbitMQ: RabbitMQConfig{
+		Metric:   &MetricConfig{},
+		RabbitMQ: &RabbitMQConfig{
 			Url: DefaultRabbitMQUrl,
 		},
 		Logging: struct {
@@ -131,6 +138,12 @@ func Load() error {
 	for _, v := range Cfg.Queues {
 		if v.Worker.Type == "" {
 			v.Worker.Type = DefaultConsumerType
+		}
+	}
+	if Cfg.Proxy != nil && Cfg.Proxy.Headers != nil {
+		Cfg.Proxy.HeadersAsByte = make([][]byte, len(Cfg.Proxy.Headers))
+		for k, v := range Cfg.Proxy.Headers {
+			Cfg.Proxy.HeadersAsByte[k] = []byte(v)
 		}
 	}
 

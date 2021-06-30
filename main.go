@@ -35,6 +35,8 @@ func main() {
 
 	// initialize messager to queue messages sent.
 	m := rabbitmq.New(exporter)
+	// wrapper
+	w := &messaging.DefaultWrapper{}
 
 	// check the sidecar mode and service count
 	s := ""
@@ -45,14 +47,14 @@ func main() {
 		log.Info().Msg("mode: gateway")
 	}
 
-	initConsumers(m)
+	initConsumers(m, w)
 
 	initRecover(m)
 
-	service.NewServer(m, exporter, s).Listen()
+	service.NewServer(m, w, exporter, s).Listen()
 }
 
-func initConsumers(m messaging.Messager) {
+func initConsumers(m messaging.Messager, w messaging.Wrapper) {
 	go func() {
 		if !config.IsSidecar() { // already waited on main method for sidecar mode.
 			// wait for the connection to establish.
@@ -60,13 +62,13 @@ func initConsumers(m messaging.Messager) {
 		}
 		for _, s := range config.Cfg.Events {
 			// register subscribers if any.
-			sr := messaging.NewSubscriberRegistrar(m, s)
+			sr := messaging.NewSubscriberRegistrar(m, w, s)
 			sr.RegisterSubscribers()
 			subscriberRegistrars[s.Name] = sr
 		}
 		for _, s := range config.Cfg.Queues {
 			// register workers if any.
-			wr := messaging.NewWorkerRegistrar(m, s)
+			wr := messaging.NewWorkerRegistrar(m, w, s)
 			wr.RegisterWorker()
 			workerRegistrars[s.Name] = wr
 		}

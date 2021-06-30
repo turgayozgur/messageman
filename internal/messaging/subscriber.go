@@ -1,7 +1,6 @@
 package messaging
 
 import (
-	"bytes"
 	"context"
 	"github.com/rs/zerolog/log"
 	"github.com/turgayozgur/messageman/config"
@@ -14,13 +13,15 @@ import (
 // SubscriberRegistrar .
 type SubscriberRegistrar struct {
 	messager   Messager
-	cfg        config.EventConfig
+	wrapper    Wrapper
+	cfg        *config.EventConfig
 	httpClient *http.Client
 }
 
-func NewSubscriberRegistrar(m Messager, cfg config.EventConfig) *SubscriberRegistrar {
+func NewSubscriberRegistrar(m Messager, w Wrapper, cfg *config.EventConfig) *SubscriberRegistrar {
 	return &SubscriberRegistrar{
 		messager: m,
+		wrapper:  w,
 		cfg:      cfg,
 		// Clients and Transports are safe for concurrent use by multiple goroutines
 		// and for efficiency should only be created once and re-used.
@@ -75,7 +76,7 @@ func (s *SubscriberRegistrar) registerSubscriber(c config.ServiceConfig) {
 }
 
 func (s *SubscriberRegistrar) handleREST(service string, url string, name string, body []byte) bool {
-	response, err := s.httpClient.Post(url, ContentType, bytes.NewBuffer(body))
+	response, err := doRest(s.wrapper, s.httpClient, url, body)
 	if err != nil {
 		log.Error().Err(err).Str("body", string(body)).Str("v", service).Str("name", name).
 			Msgf("handle failed. An error occurred on http post. url:%s", url)
@@ -90,10 +91,13 @@ func (s *SubscriberRegistrar) handleREST(service string, url string, name string
 }
 
 func (s *SubscriberRegistrar) handleGRPC(service, name string, body []byte) bool {
-	c := pb.NewHandlerServiceClient(gRPCClients[service])
-	_, err := c.Handle(context.Background(), &pb.HandleRequest{
-		Name:    name,
-		Message: body,
+	err := doGRPC(s.wrapper, body, func(ctx context.Context) error {
+		c := pb.NewEventServiceClient(gRPCClients[service])
+		_, err := c.Handle(ctx, &pb.HandleRequest{
+			Name:    name,
+			Message: body,
+		})
+		return err
 	})
 	if err != nil {
 		l := log.Error().Str("body", string(body)).Str("service", service).Str("name", name)

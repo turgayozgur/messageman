@@ -1,7 +1,6 @@
 package messaging
 
 import (
-	"bytes"
 	"context"
 	pb "github.com/turgayozgur/messageman/pb/v1/gen"
 	"google.golang.org/grpc"
@@ -20,13 +19,15 @@ var gRPCClients = map[string]*grpc.ClientConn{}
 // WorkerRegistrar .
 type WorkerRegistrar struct {
 	messager   Messager
-	cfg        config.QueueConfig
+	wrapper    Wrapper
+	cfg        *config.QueueConfig
 	httpClient *http.Client
 }
 
-func NewWorkerRegistrar(m Messager, cfg config.QueueConfig) *WorkerRegistrar {
+func NewWorkerRegistrar(m Messager, w Wrapper, cfg *config.QueueConfig) *WorkerRegistrar {
 	return &WorkerRegistrar{
 		messager: m,
+		wrapper:  w,
 		cfg:      cfg,
 		// Clients and Transports are safe for concurrent use by multiple goroutines
 		// and for efficiency should only be created once and re-used.
@@ -76,7 +77,7 @@ func (wr *WorkerRegistrar) registerWorker() {
 }
 
 func (wr *WorkerRegistrar) receiveREST(service string, url string, name string, body []byte) bool {
-	response, err := wr.httpClient.Post(url, ContentType, bytes.NewBuffer(body))
+	response, err := doRest(wr.wrapper, wr.httpClient, url, body)
 	if err != nil {
 		log.Error().Err(err).Str("body", string(body)).Str("service", service).Str("name", name).
 			Msgf("job failed. An error occurred on http post. url:%s", url)
@@ -91,13 +92,16 @@ func (wr *WorkerRegistrar) receiveREST(service string, url string, name string, 
 }
 
 func (wr *WorkerRegistrar) receiveGRPC(service string, name string, body []byte) bool {
-	c := pb.NewWorkerServiceClient(gRPCClients[service])
-	_, err := c.Receive(context.Background(), &pb.ReceiveRequest{
-		Name:    name,
-		Message: body,
+	err := doGRPC(wr.wrapper, body, func(ctx context.Context) error {
+		c := pb.NewQueueServiceClient(gRPCClients[service])
+		_, err := c.Receive(ctx, &pb.ReceiveRequest{
+			Name:    name,
+			Message: body,
+		})
+		return err
 	})
 	if err != nil {
-		l := log.Error().Str("body", string(body)).Str("service", service).Str("name", name)
+		l := log.Err(err).Str("body", string(body)).Str("service", service).Str("name", name)
 		if s, ok := status.FromError(err); ok {
 			l.Msgf("job failed. Non success gRPC status code %d on http post to worker. message:%s", s.Code(), s.Message())
 		}
