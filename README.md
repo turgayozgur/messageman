@@ -74,6 +74,8 @@ mode: gateway # sidecar, gateway
 metric: 
   enabled: true # available at /metrics path.
   exporter: prometheus
+proxy:
+  headers: ["header-name", "another-header-name"]
 rabbitmq:
   url: amqp://guest:guest@localhost:5672/
 events:
