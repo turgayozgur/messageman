@@ -77,7 +77,7 @@ func gRPCDispatchSendEmail() {
 		}
 	}
 
-	c := pb.NewQueueServiceClient(gRPCCnn)
+	c := pb.NewJobDispatcherServiceClient(gRPCCnn)
 	ctx := metadata.NewOutgoingContext(context.Background(), metadata.New(map[string]string{"x-service-name": "dispatcherapi"}))
 	if _, err := c.Queue(ctx, &pb.QueueRequest{
 		Name: emailQueueName,

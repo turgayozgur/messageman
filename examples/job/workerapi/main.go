@@ -12,7 +12,7 @@ import (
 )
 
 type server struct {
-	pb.UnimplementedQueueServiceServer
+	pb.UnimplementedWorkerServiceServer
 }
 
 func (server) Receive(context.Context, *pb.ReceiveRequest) (*empty.Empty, error) {
@@ -27,7 +27,7 @@ func main() {
 		panic(err)
 	}
 	gSrv := grpc.NewServer()
-	pb.RegisterQueueServiceServer(gSrv, &server{})
+	pb.RegisterWorkerServiceServer(gSrv, &server{})
 	go func() {
 		log.Printf("Now, gRPC listening on: http://localhost:83")
 		if err := gSrv.Serve(lis); err != nil {

@@ -15,8 +15,8 @@ import (
 
 // Server contains all that is needed to respond to incoming requests, like a database. Other services like a mail
 type Server struct {
-	pb.UnimplementedQueueServiceServer
-	pb.UnimplementedEventServiceServer
+	pb.UnimplementedJobDispatcherServiceServer
+	pb.UnimplementedPublisherServiceServer
 	messager messaging.Messager
 	wrapper  messaging.Wrapper
 	exporter metrics.Exporter
@@ -41,8 +41,8 @@ func (s *Server) Listen() {
 		log.Error().Err(err)
 	}
 	gSrv := grpc.NewServer()
-	pb.RegisterQueueServiceServer(gSrv, s)
-	pb.RegisterEventServiceServer(gSrv, s)
+	pb.RegisterJobDispatcherServiceServer(gSrv, s)
+	pb.RegisterPublisherServiceServer(gSrv, s)
 	go func() {
 		log.Info().Msgf("now, gRPC listening on: http://localhost:%s", config.Cfg.GRPCPort)
 		if err := gSrv.Serve(lis); err != nil {

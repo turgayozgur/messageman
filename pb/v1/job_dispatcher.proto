@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package messageman.v1;
+
+import "google/protobuf/empty.proto";
+
+option csharp_namespace = "Messageman.V1";
+option go_package = "github.com/turgayozgur/messageman/pb/v1;messageman";
+
+service JobDispatcherService {
+  rpc Queue (QueueRequest) returns (google.protobuf.Empty);
+}
+
+message QueueRequest {
+  string name = 1;
+  bytes message = 2;
+}

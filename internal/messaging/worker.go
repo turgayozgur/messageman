@@ -92,11 +92,11 @@ func (wr *WorkerRegistrar) receiveREST(service string, url string, name string, 
 }
 
 func (wr *WorkerRegistrar) receiveGRPC(service string, name string, body []byte) bool {
-	err := doGRPC(wr.wrapper, body, func(ctx context.Context) error {
-		c := pb.NewQueueServiceClient(gRPCClients[service])
+	err := doGRPC(wr.wrapper, body, func(ctx context.Context, b []byte) error {
+		c := pb.NewWorkerServiceClient(gRPCClients[service])
 		_, err := c.Receive(ctx, &pb.ReceiveRequest{
 			Name:    name,
-			Message: body,
+			Message: b,
 		})
 		return err
 	})

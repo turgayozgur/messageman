@@ -34,7 +34,7 @@ func doRest(wrapper Wrapper, client *http.Client, url string, body []byte) (*htt
 	return client.Do(req)
 }
 
-func doGRPC(wrapper Wrapper, body []byte, fn func(ctx context.Context) error) error {
+func doGRPC(wrapper Wrapper, body []byte, fn func(ctx context.Context, body []byte) error) error {
 	body, headers, err := wrapper.Unwrap(body)
 	if err != nil {
 		return err
@@ -45,5 +45,5 @@ func doGRPC(wrapper Wrapper, body []byte, fn func(ctx context.Context) error) er
 	}
 	ctx, _ := context.WithDeadline(context.Background(), time.Now().Add(time.Second*60))
 	ctx = metadata.NewOutgoingContext(ctx, metadata.New(h))
-	return fn(ctx)
+	return fn(ctx, body)
 }

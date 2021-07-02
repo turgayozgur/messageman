@@ -91,11 +91,11 @@ func (s *SubscriberRegistrar) handleREST(service string, url string, name string
 }
 
 func (s *SubscriberRegistrar) handleGRPC(service, name string, body []byte) bool {
-	err := doGRPC(s.wrapper, body, func(ctx context.Context) error {
-		c := pb.NewEventServiceClient(gRPCClients[service])
+	err := doGRPC(s.wrapper, body, func(ctx context.Context, b []byte) error {
+		c := pb.NewHandlerServiceClient(gRPCClients[service])
 		_, err := c.Handle(ctx, &pb.HandleRequest{
 			Name:    name,
-			Message: body,
+			Message: b,
 		})
 		return err
 	})

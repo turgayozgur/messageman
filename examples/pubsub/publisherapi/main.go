@@ -77,7 +77,7 @@ func gRPCPublishOrderCreated() {
 		}
 	}
 
-	c := pb.NewEventServiceClient(gRPCCnn)
+	c := pb.NewPublisherServiceClient(gRPCCnn)
 	ctx := metadata.NewOutgoingContext(context.Background(), metadata.New(map[string]string{"x-publisher-name": "publisherapi"}))
 	if _, err := c.Publish(ctx, &pb.PublishRequest{
 		Name: orderCreatedEventName,

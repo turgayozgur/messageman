@@ -10,7 +10,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// Publish push message to subscribers.
+// PublishREST push message to subscribers.
 func (s *Server) PublishREST(ctx *fasthttp.RequestCtx) {
 	eventName := string(ctx.QueryArgs().Peek("name"))
 

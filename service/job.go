@@ -11,7 +11,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// Queue push message to workers.
+// QueueREST push message to workers.
 func (s *Server) QueueREST(ctx *fasthttp.RequestCtx) {
 	queueName := string(ctx.QueryArgs().Peek("name"))
 

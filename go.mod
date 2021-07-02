@@ -7,8 +7,6 @@ require (
 	github.com/prometheus/client_golang v1.9.0
 	github.com/rs/zerolog v1.20.0
 	github.com/streadway/amqp v1.0.0
-	github.com/turgayozgur/messageman/examples/job/dispatcherapi v0.0.0-20201227180217-64b0d629c015 // indirect
-	github.com/turgayozgur/messageman/examples/job/workerapi v0.0.0-20201227180217-64b0d629c015 // indirect
 	github.com/valyala/fasthttp v1.18.0
 	google.golang.org/grpc v1.34.0
 	google.golang.org/protobuf v1.25.0
