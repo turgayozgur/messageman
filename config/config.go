@@ -108,7 +108,7 @@ func init() {
 // Load attempts to parse the given config file and return a Config object.
 func Load() error {
 	// parse flags.
-	flag.StringVar(&configFile, "-config-file", DefaultConfigFile, UsageConfigFile)
+	flag.StringVar(&configFile, "config-file", DefaultConfigFile, UsageConfigFile)
 	flag.StringVar(&configFile, "c", DefaultConfigFile, UsageConfigFile+" (shorthand)")
 	flag.Parse()
 

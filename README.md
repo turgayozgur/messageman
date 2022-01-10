@@ -59,7 +59,7 @@ queues:
       url: http://localhost:81/api/email/send
 ```
 
-Run messageman with this config file. Also you can specify the config file location with using `-c` or `--config-file` arguments.
+Run messageman with this config file. Also you can specify the config file location with using `-c` or `-config-file` arguments.
 
 ```bash
 docker run --rm --name messageman -p 8015:8015 --volume=/path/to/messageman.yml:/app/messageman.yml turgayozgur/messageman
